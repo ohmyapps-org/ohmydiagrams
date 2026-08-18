@@ -1,0 +1,189 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+
+  --app-bg: #f5f7fa;
+  --app-surface: #ffffff;
+  --app-glass: rgb(255 255 255 / 0.72);
+  --app-glass-strong: rgb(255 255 255 / 0.88);
+  --app-border: rgb(15 17 21 / 0.09);
+  --app-border-strong: rgb(15 17 21 / 0.16);
+  --app-text: #1a1d21;
+  --app-muted: #6b7280;
+  --app-faint: #9ca3af;
+  --app-accent: #3b82f6;
+  --app-accent-soft: rgb(59 130 246 / 0.12);
+  --app-danger: #ef4444;
+  --app-danger-soft: rgb(239 68 68 / 0.1);
+  --app-ok: #16a34a;
+  --app-ok-soft: rgb(22 163 74 / 0.1);
+  --app-warn: #d97706;
+  --app-shadow: 0 8px 24px rgb(15 17 21 / 0.08), 0 2px 6px rgb(15 17 21 / 0.05);
+
+  /* Diagram ink: used by canvas nodes AND the SVG exporter. */
+  --uml-ink: #1a1d21;
+  --uml-line: #3f4650;
+  --uml-usecase-fill: #ffffff;
+  --uml-boundary-fill: rgb(59 130 246 / 0.04);
+  --uml-boundary-stroke: #94a3b8;
+  --uml-note-fill: #fffdf2;
+  --uml-note-stroke: #d8cfa8;
+  --uml-grid: #c9d1dc;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --app-bg: #0f1115;
+  --app-surface: #161920;
+  --app-glass: rgb(28 32 40 / 0.72);
+  --app-glass-strong: rgb(28 32 40 / 0.9);
+  --app-border: rgb(232 234 237 / 0.1);
+  --app-border-strong: rgb(232 234 237 / 0.2);
+  --app-text: #e8eaed;
+  --app-muted: #9aa3af;
+  --app-faint: #6b7280;
+  --app-accent: #60a5fa;
+  --app-accent-soft: rgb(96 165 250 / 0.16);
+  --app-danger: #f87171;
+  --app-danger-soft: rgb(248 113 113 / 0.14);
+  --app-ok: #4ade80;
+  --app-ok-soft: rgb(74 222 128 / 0.13);
+  --app-warn: #fbbf24;
+  --app-shadow: 0 8px 28px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+
+  --uml-ink: #e8eaed;
+  --uml-line: #b6bdc8;
+  --uml-usecase-fill: #1c2029;
+  --uml-boundary-fill: rgb(96 165 250 / 0.06);
+  --uml-boundary-stroke: #64748b;
+  --uml-note-fill: #26241b;
+  --uml-note-stroke: #5c5638;
+  --uml-grid: #333a46;
+}
+
+@theme inline {
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-glass: var(--app-glass);
+  --color-glass-strong: var(--app-glass-strong);
+  --color-line: var(--app-border);
+  --color-line-strong: var(--app-border-strong);
+  --color-ink: var(--app-text);
+  --color-muted: var(--app-muted);
+  --color-faint: var(--app-faint);
+  --color-accent: var(--app-accent);
+  --color-accent-soft: var(--app-accent-soft);
+  --color-danger: var(--app-danger);
+  --color-danger-soft: var(--app-danger-soft);
+  --color-ok: var(--app-ok);
+  --color-ok-soft: var(--app-ok-soft);
+  --color-warn: var(--app-warn);
+
+  --radius-panel: 12px;
+  --radius-control: 8px;
+
+  --font-sans: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@utility glass {
+  background: var(--app-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+}
+
+/* --- React Flow overrides ------------------------------------------------ */
+
+.react-flow {
+  --xy-background-color: var(--app-bg);
+  --xy-edge-stroke-default: var(--uml-line);
+  --xy-edge-stroke-selected-default: var(--app-accent);
+  --xy-selection-background-color: var(--app-accent-soft);
+  --xy-selection-border-default: 1px dashed var(--app-accent);
+}
+
+.react-flow__node {
+  font-family: var(--font-sans);
+  color: var(--uml-ink);
+}
+
+.react-flow__handle {
+  opacity: 0;
+  border: none;
+  background: transparent;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__edge.selected .uml-edge-hit + .uml-edge-path,
+.react-flow__edge:focus .uml-edge-path {
+  stroke: var(--app-accent);
+}
+
+.react-flow__edge-textbg {
+  fill: var(--app-bg);
+}
+
+/* Node body that reacts to selection without shifting layout. */
+.uml-selectable {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color 120ms ease;
+}
+
+.react-flow__node.selected .uml-selectable {
+  outline-color: var(--app-accent);
+}
+
+.uml-flagged {
+  animation: uml-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes uml-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgb(239 68 68 / 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgb(239 68 68 / 0.85));
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--app-border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
