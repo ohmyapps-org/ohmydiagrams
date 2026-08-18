@@ -131,9 +131,28 @@ body {
 }
 
 .react-flow__handle {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--app-accent);
+  background: var(--app-surface);
   opacity: 0;
-  border: none;
-  background: transparent;
+  transition:
+    opacity 120ms ease,
+    background 120ms ease;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__handle:hover {
+  background: var(--app-accent);
+  transform-origin: center;
+}
+
+.react-flow__handle.connectionindicator:hover {
+  cursor: crosshair;
 }
 
 .react-flow__attribution {

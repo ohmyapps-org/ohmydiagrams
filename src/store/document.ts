@@ -91,6 +91,8 @@ export interface UiState {
   guideChecks: Record<string, boolean>
   /** Element ids the checklist asked us to highlight. */
   flagged: string[]
+  /** Node or edge whose label is currently open for inline editing. */
+  editingId: string | null
 }
 
 interface Clipboard {
@@ -157,6 +159,7 @@ const INITIAL_UI: UiState = {
   pendingEdgeKind: 'association',
   guideChecks: {},
   flagged: [],
+  editingId: null,
 }
 
 function withSelection<T extends { id: string; selected?: boolean }>(
@@ -571,6 +574,7 @@ export const useDocument = create<DocumentStore>()(
         ui: {
           ...state.ui,
           flagged: [],
+          editingId: null,
         },
       }),
     },
