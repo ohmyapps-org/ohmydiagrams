@@ -6,6 +6,7 @@ import {
   ReactFlow,
   useReactFlow,
   type Connection,
+  type FinalConnectionState,
   type IsValidConnection,
   type OnConnect,
 } from '@xyflow/react'
@@ -101,6 +102,24 @@ export default function Canvas({ onOpenGuide }: Props) {
     [findNode, pendingEdgeKind, addEdge],
   )
 
+  /**
+   * `isValidConnection` makes React Flow refuse the drop before `onConnect`
+   * ever runs, so the teaching moment has to live here: `onConnectEnd` fires
+   * for rejected attempts too.
+   */
+  const onConnectEnd = useCallback(
+    (_event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      const source = findNode(state.fromNode?.id)
+      const target = findNode(state.toNode?.id)
+      // No target means the user let go over empty canvas: nothing to explain.
+      if (!source || !target) return
+
+      const verdict = canConnect(pendingEdgeKind, source, target)
+      if (!verdict.ok && verdict.reason) toast.error(verdict.reason)
+    },
+    [findNode, pendingEdgeKind],
+  )
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
@@ -153,6 +172,7 @@ export default function Canvas({ onOpenGuide }: Props) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         onNodeDragStart={beginTransaction}
         onNodeDragStop={endTransaction}
