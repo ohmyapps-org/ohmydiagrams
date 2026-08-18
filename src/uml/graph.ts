@@ -156,7 +156,7 @@ export function edgesInCycles(edges: readonly UmlEdge[]): Set<string> {
  * associations, optionally hopping up generalization chains, since a child use
  * case inherits its parent's actor participation.
  */
-export function useCasesReachingAnActor(index: GraphIndex): Set<string> {
+export function reachableUseCasesFromActors(index: GraphIndex): Set<string> {
   const associations = edgesOfKind(index, 'association')
   const generalizations = edgesOfKind(index, 'generalization')
 

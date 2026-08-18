@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface ContextMenuTarget {
   x: number
@@ -84,7 +85,9 @@ export default function ContextMenu({
 
   const isNode = target.kind === 'node'
 
-  return (
+  // Portalled to <body>: the canvas panel uses backdrop-filter, which makes it
+  // the containing block for fixed children and clips them to its bounds.
+  return createPortal(
     <div
       ref={ref}
       className="glass fixed z-50 w-52 rounded-panel p-1"
@@ -130,6 +133,7 @@ export default function ContextMenu({
         danger
         onClick={onDelete}
       />
-    </div>
+    </div>,
+    document.body,
   )
 }

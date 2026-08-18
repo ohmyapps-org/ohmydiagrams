@@ -1,11 +1,25 @@
-export const EXPORT_FONT_STACK =
+/**
+ * Font stack for measuring. Family names are double-quoted, which is what CSS
+ * wants but what would break an XML attribute — see `SVG_FONT_STACK`.
+ */
+export const MEASURE_FONT_STACK =
   'ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+
+/**
+ * The same stack with single-quoted family names, safe to drop into a
+ * double-quoted `font-family` attribute in the exported SVG.
+ */
+export const SVG_FONT_STACK = MEASURE_FONT_STACK.replace(/"/g, "'")
 
 let context: CanvasRenderingContext2D | null | undefined
 
 function measurer(): CanvasRenderingContext2D | null {
   if (context !== undefined) return context
-  context = document.createElement('canvas').getContext('2d')
+  // Falls back to an estimate when there is no DOM (tests, SSR).
+  context =
+    typeof document === 'undefined'
+      ? null
+      : document.createElement('canvas').getContext('2d')
   return context
 }
 
@@ -13,7 +27,7 @@ function measurer(): CanvasRenderingContext2D | null {
 export function measureText(text: string, fontSize: number, bold = false): number {
   const ctx = measurer()
   if (!ctx) return text.length * fontSize * 0.52
-  ctx.font = `${bold ? '600 ' : ''}${fontSize}px ${EXPORT_FONT_STACK}`
+  ctx.font = `${bold ? '600 ' : ''}${fontSize}px ${MEASURE_FONT_STACK}`
   return ctx.measureText(text).width
 }
 

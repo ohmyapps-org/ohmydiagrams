@@ -11,7 +11,7 @@ import {
   edgesInCycles,
   edgesOfKind,
   hasPurpose,
-  useCasesReachingAnActor,
+  reachableUseCasesFromActors,
   type GraphIndex,
 } from './graph'
 import { isInfinitivePhrase, normalizeName, suggestInfinitivePhrase } from './verbs'
@@ -274,7 +274,7 @@ function ruleUseCasesConnected(ctx: RuleContext): ValidationItem {
       'Agregá casos de uso y asocialos a sus actores.',
     )
   }
-  const grounded = useCasesReachingAnActor(ctx.index)
+  const grounded = reachableUseCasesFromActors(ctx.index)
   const orphans = ctx.useCases.filter((node) => !grounded.has(node.id))
   return orphans.length === 0
     ? pass(7, id, title, 'Todos tienen un actor que los inicia o los hereda.')

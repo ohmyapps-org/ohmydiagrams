@@ -17,7 +17,7 @@ import {
   type Rect,
 } from '../uml/geometry'
 import { markerDefs, markerId } from '../uml/style'
-import { EXPORT_FONT_STACK, escapeXml, measureText, wrapText } from './text'
+import { SVG_FONT_STACK, escapeXml, measureText, wrapText } from './text'
 
 /**
  * Exports always use the light palette. A diagram pasted into a report or a
@@ -128,7 +128,7 @@ function textBlock(text: string, options: TextBlockOptions): string {
     )
     .join('')
 
-  return `<text font-family="${EXPORT_FONT_STACK}" font-size="${fontSize}" ${
+  return `<text font-family="${SVG_FONT_STACK}" font-size="${fontSize}" ${
     bold ? 'font-weight="600" ' : ''
   }fill="${fill}" text-anchor="${anchor}">${spans}</text>`
 }

@@ -168,6 +168,9 @@ export default function Canvas({ onOpenGuide }: Props) {
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode={null}
         connectionMode={ConnectionMode.Loose}
+        // Generous snap radius so dropping anywhere on a shape connects to it,
+        // instead of demanding a pixel-accurate hit on a handle dot.
+        connectionRadius={70}
         connectionLineType={ConnectionLineType.Straight}
         connectionLineStyle={{
           stroke: 'var(--app-accent)',
