@@ -84,6 +84,12 @@ Tres decisiones sostienen el resto:
    (elipses, trazados, marcadores) en lugar de una captura envuelta en
    `foreignObject`, y el PNG se rasteriza desde ese mismo SVG.
 
+## Estado del proyecto
+
+El alcance P0 está completo. Para retomar el trabajo (qué está verificado, qué
+no, decisiones de arquitectura y trampas ya encontradas) ver
+[`docs/ESTADO.md`](docs/ESTADO.md).
+
 ## Licencia
 
 MIT
