@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, CircleDashed, FileUp, Plus, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { useDocument } from '../store/document'
+import { useLlm } from '../store/llm'
 import { useRequirements } from '../store/requirements'
 import type { RequirementCandidate } from '../requirements/types'
 import { nodeKindOf } from '../types/uml'
@@ -11,6 +12,8 @@ import ProgressBar from './ProgressBar'
 function EmptyState() {
   const status = useRequirements((state) => state.status)
   const importFromPicker = useRequirements((state) => state.importFromPicker)
+  const configured = useLlm((state) => state.configured)
+  const model = useLlm((state) => state.config.model)
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -28,7 +31,9 @@ function EmptyState() {
         {status === 'reading' ? 'Leyendo…' : 'Importar PDF, Markdown o TXT'}
       </button>
       <p className="text-[11px] leading-snug text-faint">
-        La lectura es local: el archivo no sale del navegador.
+        {configured
+          ? `Lee ${model} en la URL configurada: el texto del archivo se le envía.`
+          : 'La lectura es local: el archivo no sale del navegador.'}
       </p>
     </div>
   )
@@ -117,6 +122,7 @@ function CandidateRow({
 export default function RequirementsTab() {
   const candidates = useRequirements((state) => state.candidates)
   const sourceName = useRequirements((state) => state.sourceName)
+  const extractorLabel = useRequirements((state) => state.extractorLabel)
   const importFromPicker = useRequirements((state) => state.importFromPicker)
   const clear = useRequirements((state) => state.clear)
   const nodes = useDocument((state) => state.nodes)
@@ -142,7 +148,10 @@ export default function RequirementsTab() {
         doneLabel="Todo cubierto"
       />
       <div className="flex items-center justify-between px-3.5 pb-2">
-        <span className="truncate text-[11px] text-faint">{sourceName}</span>
+        <span className="truncate text-[11px] text-faint">
+          {sourceName}
+          {extractorLabel && ` · ${extractorLabel}`}
+        </span>
         <div className="flex shrink-0 gap-1">
           <button
             type="button"

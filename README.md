@@ -47,9 +47,26 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
 - La lectura propone casos de uso a partir de las frases que enuncian una
   capacidad ("el sistema debe permitir registrar ventas") y los contrasta contra
   el lienzo: qué ya está dibujado y qué falta, con un botón para agregarlo.
-- La extracción está detrás de una interfaz (`requirements/types.ts`), así que la
-  implementación local y determinista se puede reemplazar por una con modelo sin
-  tocar la interfaz de usuario.
+- La extracción está detrás de una interfaz (`requirements/types.ts`): sin modelo
+  configurado corre la implementación local y determinista, y con uno conectado
+  corre el modelo, sin cambiar nada de la interfaz de usuario.
+
+**Modelo (opcional)**
+- El botón de la chispa en la barra superior conecta cualquier servidor con API
+  compatible con OpenAI: URL base, nombre del modelo y clave opcional. Sirve
+  igual para un contenedor propio en un VPS (Ollama, vLLM, LM Studio) que para
+  OpenAI, Anthropic u OpenRouter.
+- Sólo hace falta que responda en `POST {URL base}/chat/completions`. La URL se
+  normaliza sola: `http://vps:11434`, `.../v1` y la ruta completa son la misma
+  cosa.
+- "Probar conexión" hace una consulta mínima que valida URL, clave y modelo de
+  una sola vez, y muestra el error del servidor tal como llega.
+- Se usa para leer la especificación de requisitos: ahí el texto del archivo se
+  envía a esa URL. El diagrama nunca sale del navegador. Si el modelo falla, la
+  importación no se pierde: se avisa y se lee con el lector local.
+- La configuración (clave incluida) vive en `localStorage` y las llamadas salen
+  del navegador, así que el servidor tiene que permitir CORS desde el origen
+  donde esté publicada la app.
 
 **Agentes (MCP)**
 - Servidor MCP que expone el lienzo abierto a un agente: leer el diagrama,
@@ -100,6 +117,7 @@ src/
   ui/             Paneles: barra superior, paleta, propiedades, checklist
   export/         Renderizador SVG, rasterizador PNG y serialización JSON
   requirements/   Lectura de PDF/Markdown/TXT y extracción de casos de uso
+  llm/            Cliente de chat compatible con OpenAI y forma de la conexión
   bridge/         Protocolo y cliente del puente con el servidor MCP
 mcp/              Servidor MCP (Bun + stdio) y host del WebSocket local
 ```

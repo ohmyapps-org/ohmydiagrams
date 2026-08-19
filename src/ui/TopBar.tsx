@@ -19,6 +19,7 @@ import {
   PlugZap,
   Redo2,
   Save,
+  Sparkles,
   Sun,
   Undo2,
   ZoomIn,
@@ -29,8 +30,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useBridge } from '../bridge/client'
 import { exportJson, exportPng, exportSvg, importJson } from '../export'
 import { useDocument } from '../store/document'
+import { useLlm } from '../store/llm'
 import { useTheme } from '../store/theme'
 import type { AlignAxis } from '../uml/geometry'
+import LlmSettings from './LlmSettings'
 
 function ToolButton({
   icon,
@@ -172,6 +175,34 @@ function BridgeButton() {
   )
 }
 
+/** Connection to a chat model: a URL, so any server can be the one that reads. */
+function LlmButton() {
+  const [open, setOpen] = useState(false)
+  const configured = useLlm((state) => state.configured)
+  const model = useLlm((state) => state.config.model)
+  const label = configured
+    ? `Modelo conectado: ${model}. Clic para editar.`
+    : 'Conectar un modelo por URL'
+
+  return (
+    <>
+      <button
+        type="button"
+        title={label}
+        aria-label={label}
+        aria-pressed={configured}
+        onClick={() => setOpen(true)}
+        className={`flex h-8 w-8 items-center justify-center rounded-control transition ${
+          configured ? 'bg-accent-soft text-accent' : 'text-ink hover:bg-accent-soft'
+        }`}
+      >
+        <Sparkles size={16} />
+      </button>
+      {open && <LlmSettings onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
 export default function TopBar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
 
@@ -266,6 +297,7 @@ export default function TopBar() {
       <Divider />
 
       <ThemeButton />
+      <LlmButton />
       <BridgeButton />
       <ExportMenu />
     </header>
