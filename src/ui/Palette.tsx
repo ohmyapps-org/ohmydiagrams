@@ -12,8 +12,9 @@ import {
   Frame,
   Split,
 } from 'lucide-react'
+import { useReactFlow, useStore } from '@xyflow/react'
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { SHAPE_MIME } from '../canvas/dnd'
 import { useDocument } from '../store/document'
 import {
@@ -22,8 +23,34 @@ import {
   type UmlEdgeKind,
   type UmlNodeKind,
 } from '../types/uml'
+import type { Point } from '../uml/geometry'
+import { avoidOverlap, centredOn } from '../uml/placement'
 import { CONNECTION_HINTS } from '../uml/rules'
 import { normalizeName } from '../uml/verbs'
+
+/**
+ * Clicking the palette drops the shape in the middle of what the user is
+ * looking at, stepping aside when that spot is taken. Dragging still decides
+ * the position by hand.
+ */
+function useDropPoint(): (kind: UmlNodeKind) => Point {
+  const domNode = useStore((state) => state.domNode)
+  const { screenToFlowPosition } = useReactFlow()
+
+  return useCallback(
+    (kind: UmlNodeKind) => {
+      const box = domNode?.getBoundingClientRect()
+      const centre = box
+        ? screenToFlowPosition({
+            x: box.x + box.width / 2,
+            y: box.y + box.height / 2,
+          })
+        : { x: 0, y: 0 }
+      return avoidOverlap(useDocument.getState().nodes, centredOn(kind, centre))
+    },
+    [domNode, screenToFlowPosition],
+  )
+}
 
 interface ShapeEntry {
   kind: UmlNodeKind
@@ -73,6 +100,7 @@ const BASIC_CONNECTORS: readonly ConnectorEntry[] = [
 function ShapeButton({ entry }: { entry: ShapeEntry }) {
   const spec = NODE_SPECS[entry.kind]
   const addNode = useDocument((state) => state.addNode)
+  const dropPoint = useDropPoint()
 
   return (
     <button
@@ -84,7 +112,7 @@ function ShapeButton({ entry }: { entry: ShapeEntry }) {
         event.dataTransfer.effectAllowed = 'copy'
       }}
       // Click drops the shape in a readable spot for keyboard-first users.
-      onClick={() => addNode(entry.kind, { x: 80, y: 80 })}
+      onClick={() => addNode(entry.kind, dropPoint(entry.kind))}
       className="flex w-full cursor-grab items-center gap-2.5 rounded-control px-2.5 py-2 text-left text-[13px] text-ink transition hover:bg-accent-soft active:cursor-grabbing"
     >
       <span className="text-faint">{entry.icon}</span>

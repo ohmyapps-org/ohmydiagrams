@@ -14,16 +14,22 @@ import {
   FolderOpen,
   Grid3x3,
   Maximize,
+  Moon,
+  Plug,
+  PlugZap,
   Redo2,
   Save,
+  Sun,
   Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useBridge } from '../bridge/client'
 import { exportJson, exportPng, exportSvg, importJson } from '../export'
 import { useDocument } from '../store/document'
+import { useTheme } from '../store/theme'
 import type { AlignAxis } from '../uml/geometry'
 
 function ToolButton({
@@ -46,6 +52,7 @@ function ToolButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       className={`flex h-8 w-8 items-center justify-center rounded-control transition disabled:opacity-30 ${
         active ? 'bg-accent-soft text-accent' : 'text-ink hover:bg-accent-soft'
       }`}
@@ -117,6 +124,51 @@ function ExportMenu() {
         </div>
       )}
     </div>
+  )
+}
+
+const BRIDGE_LABELS = {
+  off: 'Conectar el lienzo a un agente MCP',
+  connecting: 'Buscando el servidor MCP…',
+  connected: 'Agente MCP conectado. Clic para desconectar.',
+} as const
+
+function ThemeButton() {
+  const theme = useTheme((state) => state.theme)
+  const toggle = useTheme((state) => state.toggle)
+  const label = theme === 'dark' ? 'Pasar al tema claro' : 'Pasar al tema oscuro'
+
+  return (
+    <ToolButton
+      icon={theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      label={label}
+      onClick={toggle}
+    />
+  )
+}
+
+/** Opt-in link to the local MCP server, so agent access is never silent. */
+function BridgeButton() {
+  const status = useBridge((state) => state.status)
+  const toggle = useBridge((state) => state.toggle)
+
+  return (
+    <button
+      type="button"
+      title={BRIDGE_LABELS[status]}
+      aria-label={BRIDGE_LABELS[status]}
+      aria-pressed={status !== 'off'}
+      onClick={toggle}
+      className={`flex h-8 w-8 items-center justify-center rounded-control transition ${
+        status === 'connected'
+          ? 'bg-ok-soft text-ok'
+          : status === 'connecting'
+            ? 'animate-pulse text-warn'
+            : 'text-ink hover:bg-accent-soft'
+      }`}
+    >
+      {status === 'connected' ? <PlugZap size={16} /> : <Plug size={16} />}
+    </button>
   )
 }
 
@@ -213,6 +265,8 @@ export default function TopBar() {
 
       <Divider />
 
+      <ThemeButton />
+      <BridgeButton />
       <ExportMenu />
     </header>
   )

@@ -21,21 +21,21 @@ export function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-/** Opens the OS file picker and resolves with the chosen file's text. */
-export function pickTextFile(accept: string): Promise<string | null> {
+/** Opens the OS file picker and resolves with the chosen file. */
+export function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = accept
-    input.addEventListener('change', () => {
-      const file = input.files?.[0]
-      if (!file) {
-        resolve(null)
-        return
-      }
-      file.text().then(resolve).catch(() => resolve(null))
-    })
+    input.addEventListener('change', () => resolve(input.files?.[0] ?? null))
     input.addEventListener('cancel', () => resolve(null))
     input.click()
   })
+}
+
+/** Opens the OS file picker and resolves with the chosen file's text. */
+export async function pickTextFile(accept: string): Promise<string | null> {
+  const file = await pickFile(accept)
+  if (!file) return null
+  return file.text().catch(() => null)
 }

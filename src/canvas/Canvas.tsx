@@ -12,13 +12,23 @@ import {
 } from '@xyflow/react'
 import { useCallback, useRef, useState } from 'react'
 import { useDocument } from '../store/document'
+import { useTheme } from '../store/theme'
 import { toast } from '../store/toasts'
-import { edgeKindOf, isUmlNodeKind, type UmlEdge, type UmlNode } from '../types/uml'
-import { GRID_SIZE } from '../uml/geometry'
+import {
+  edgeKindOf,
+  isUmlNodeKind,
+  type UmlEdge,
+  type UmlNode,
+  type UmlNodeKind,
+} from '../types/uml'
+import { GRID_SIZE, type Point } from '../uml/geometry'
+import { centredOn } from '../uml/placement'
 import { canConnect, orientConnection } from '../uml/rules'
+import { createUseCaseSkeleton } from '../uml/templates'
 import ContextMenu, { type ContextMenuTarget } from './ContextMenu'
 import EmptyState from './EmptyState'
 import Markers from './Markers'
+import QuickMenu, { type QuickMenuTarget } from './QuickMenu'
 import { SHAPE_MIME } from './dnd'
 import { edgeTypes } from './edges'
 import { nodeTypes } from './nodes'
@@ -29,16 +39,28 @@ interface Props {
 
 const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE]
 
+/**
+ * Right dragging pans the canvas and ends with a `contextmenu` event, so the
+ * menu only opens when the pointer barely moved between press and release.
+ */
+const PAN_SLOP_PX = 4
+
 export default function Canvas({ onOpenGuide }: Props) {
   const wrapper = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<ContextMenuTarget | null>(null)
+  const [quickMenu, setQuickMenu] = useState<QuickMenuTarget | null>(null)
+  /** Flow coordinates of the click that opened the quick menu. */
+  const quickMenuPoint = useRef<Point>({ x: 0, y: 0 })
+  /** Where the right button went down, to tell a click from a pan. */
+  const rightPress = useRef<Point | null>(null)
 
   const nodes = useDocument((state) => state.nodes)
   const edges = useDocument((state) => state.edges)
   const snapToGrid = useDocument((state) => state.ui.snapToGrid)
   const showGrid = useDocument((state) => state.ui.showGrid)
   const pendingEdgeKind = useDocument((state) => state.ui.pendingEdgeKind)
+  const theme = useTheme((state) => state.theme)
 
   const onNodesChange = useDocument((state) => state.onNodesChange)
   const onEdgesChange = useDocument((state) => state.onEdgesChange)
@@ -47,6 +69,8 @@ export default function Canvas({ onOpenGuide }: Props) {
   const addNode = useDocument((state) => state.addNode)
   const addEdge = useDocument((state) => state.addEdge)
   const setUi = useDocument((state) => state.setUi)
+  const insertFragment = useDocument((state) => state.insertFragment)
+  const canPaste = useDocument((state) => state.clipboard !== null)
 
   const findNode = useCallback(
     (id: string | null | undefined): UmlNode | undefined =>
@@ -143,12 +167,77 @@ export default function Canvas({ onOpenGuide }: Props) {
     (kind: 'node' | 'edge') =>
       (event: React.MouseEvent, element: { id: string }) => {
         event.preventDefault()
+        setQuickMenu(null)
         setMenu({ x: event.clientX, y: event.clientY, kind, id: element.id })
       },
     [],
   )
 
-  const closeMenu = useCallback(() => setMenu(null), [])
+  const closeMenu = useCallback(() => {
+    setMenu(null)
+    setQuickMenu(null)
+  }, [])
+
+  const onPointerDown = useCallback((event: React.PointerEvent) => {
+    rightPress.current =
+      event.button === 2 ? { x: event.clientX, y: event.clientY } : null
+  }, [])
+
+  /**
+   * Right click on empty canvas: the quick menu at the cursor. React Flow
+   * swallows `onPaneContextMenu` whenever `panOnDrag` includes the right
+   * button, so the event is picked up here on the wrapper instead.
+   */
+  const onContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      if (!(event.target as HTMLElement).classList.contains('react-flow__pane')) {
+        return
+      }
+      const press = rightPress.current
+      if (
+        press &&
+        Math.hypot(event.clientX - press.x, event.clientY - press.y) > PAN_SLOP_PX
+      ) {
+        return
+      }
+      event.preventDefault()
+      setMenu(null)
+      quickMenuPoint.current = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      setQuickMenu({ x: event.clientX, y: event.clientY })
+    },
+    [screenToFlowPosition],
+  )
+
+  /** Double click on empty canvas: drop a text label ready to type into. */
+  const onDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      // Nodes live inside the pane, so only a direct hit counts as "empty".
+      if (!(event.target as HTMLElement).classList.contains('react-flow__pane')) {
+        return
+      }
+      closeMenu()
+      const point = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      const node = addNode('text', centredOn('text', point), '')
+      setUi({ editingId: node.id })
+    },
+    [addNode, closeMenu, screenToFlowPosition, setUi],
+  )
+
+  const quickCreate = useCallback(
+    (kind: UmlNodeKind) => {
+      addNode(kind, centredOn(kind, quickMenuPoint.current))
+      setQuickMenu(null)
+    },
+    [addNode],
+  )
+
+  const quickSkeleton = useCallback(() => {
+    insertFragment(createUseCaseSkeleton(quickMenuPoint.current))
+    setQuickMenu(null)
+  }, [insertFragment])
 
   const menuAction = useCallback(
     (run: (id: string) => void) => () => {
@@ -162,7 +251,15 @@ export default function Canvas({ onOpenGuide }: Props) {
   const store = useDocument.getState
 
   return (
-    <div ref={wrapper} className="relative h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
+    <div
+      ref={wrapper}
+      className="relative h-full w-full"
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDoubleClick={onDoubleClick}
+      onPointerDown={onPointerDown}
+      onContextMenu={onContextMenu}
+    >
       <Markers />
       <ReactFlow<UmlNode, UmlEdge>
         nodes={nodes}
@@ -187,7 +284,10 @@ export default function Canvas({ onOpenGuide }: Props) {
         deleteKeyCode={null}
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode={null}
+        colorMode={theme}
         connectionMode={ConnectionMode.Loose}
+        // Double click drops a text label instead of zooming.
+        zoomOnDoubleClick={false}
         // Generous snap radius so dropping anywhere on a shape connects to it,
         // instead of demanding a pixel-accurate hit on a handle dot.
         connectionRadius={70}
@@ -221,6 +321,20 @@ export default function Canvas({ onOpenGuide }: Props) {
       </ReactFlow>
 
       {nodes.length === 0 && <EmptyState onOpenGuide={onOpenGuide} />}
+
+      {quickMenu && (
+        <QuickMenu
+          target={quickMenu}
+          canPaste={canPaste}
+          onClose={closeMenu}
+          onSkeleton={quickSkeleton}
+          onCreate={quickCreate}
+          onPaste={() => {
+            store().paste()
+            setQuickMenu(null)
+          }}
+        />
+      )}
 
       {menu && (
         <ContextMenu

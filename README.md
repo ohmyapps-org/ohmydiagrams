@@ -20,6 +20,11 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   puntos de quiebre editables (doble clic sobre la línea).
 - Selección múltiple, alineación y distribución, duplicar, copiar/pegar,
   z-order, menú contextual, deshacer/rehacer y atajos de teclado.
+- Clic derecho sobre el lienzo vacío: menú rápido con el esqueleto de un
+  diagrama completo y las formas más usadas. Doble clic: etiqueta de texto lista
+  para escribir.
+- Tema claro y oscuro, con un interruptor en la barra superior. Sin elección
+  guardada sigue al sistema operativo.
 
 **Relaciones UML**
 - Asociación, `«include»`, `«extend»`, generalización, conector de nota y flecha
@@ -35,6 +40,24 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
 - Cada ítem en rojo explica qué falta y sugiere una corrección concreta; algunos
   ofrecen un arreglo de un clic (renombrar, invertir dirección).
 - Segunda pestaña con la guía del proceso de modelado paso a paso.
+
+**Requisitos**
+- Importación de la especificación de requisitos en PDF, Markdown o texto plano,
+  leída dentro del navegador (pdf.js se carga sólo si abrís un PDF).
+- La lectura propone casos de uso a partir de las frases que enuncian una
+  capacidad ("el sistema debe permitir registrar ventas") y los contrasta contra
+  el lienzo: qué ya está dibujado y qué falta, con un botón para agregarlo.
+- La extracción está detrás de una interfaz (`requirements/types.ts`), así que la
+  implementación local y determinista se puede reemplazar por una con modelo sin
+  tocar la interfaz de usuario.
+
+**Agentes (MCP)**
+- Servidor MCP que expone el lienzo abierto a un agente: leer el diagrama,
+  crear y conectar elementos, renombrar, borrar y consultar la checklist.
+- Las relaciones inválidas también se rechazan por esta vía, con la misma
+  explicación de la regla que ve una persona.
+- La conexión es opt-in desde el botón del enchufe en la barra superior y el
+  socket escucha sólo en loopback. Ver [`mcp/README.md`](mcp/README.md).
 
 **Persistencia y exportación**
 - Autoguardado en `localStorage` con escritura diferida.
@@ -54,9 +77,16 @@ bun dev
 ```
 
 ```bash
-bun run typecheck   # tsc -b
+bun run typecheck   # tsc -b (app, vite, mcp y tests)
 bunx oxlint .       # linting
+bun test            # tests unitarios
 bun run build       # build de producción
+```
+
+Para exponer el lienzo a un agente, con la app abierta en el navegador:
+
+```bash
+bun run mcp
 ```
 
 ## Arquitectura
@@ -69,6 +99,9 @@ src/
   canvas/         Componentes de React Flow: nodos, relaciones, edición en línea
   ui/             Paneles: barra superior, paleta, propiedades, checklist
   export/         Renderizador SVG, rasterizador PNG y serialización JSON
+  requirements/   Lectura de PDF/Markdown/TXT y extracción de casos de uso
+  bridge/         Protocolo y cliente del puente con el servidor MCP
+mcp/              Servidor MCP (Bun + stdio) y host del WebSocket local
 ```
 
 Tres decisiones sostienen el resto:

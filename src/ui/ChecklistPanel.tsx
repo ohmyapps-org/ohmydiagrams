@@ -3,38 +3,14 @@ import { useMemo } from 'react'
 import { useDocument } from '../store/document'
 import { GUIDE_STEPS } from '../uml/guide'
 import { validate, type ValidationFix, type ValidationItem } from '../uml/validation'
+import ProgressBar from './ProgressBar'
+import RequirementsTab from './RequirementsTab'
 
-export type ChecklistTab = 'validation' | 'guide'
+export type ChecklistTab = 'validation' | 'guide' | 'requirements'
 
 interface Props {
   tab: ChecklistTab
   onTabChange: (tab: ChecklistTab) => void
-}
-
-function ProgressBar({ passed, total }: { passed: number; total: number }) {
-  const ratio = total === 0 ? 0 : passed / total
-  const complete = passed === total
-  return (
-    <div className="px-3.5 pb-3">
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="text-[12px] text-muted">
-          {passed} de {total} verificaciones
-        </span>
-        {complete && (
-          <span className="text-[12px] font-medium text-ok">Diagrama válido</span>
-        )}
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-line">
-        <div
-          className="h-full rounded-full transition-[width] duration-300"
-          style={{
-            width: `${ratio * 100}%`,
-            background: complete ? 'var(--app-ok)' : 'var(--app-accent)',
-          }}
-        />
-      </div>
-    </div>
-  )
 }
 
 function FixButton({ fix }: { fix: ValidationFix }) {
@@ -175,7 +151,12 @@ function GuideTab() {
 
   return (
     <>
-      <ProgressBar passed={done} total={GUIDE_STEPS.length} />
+      <ProgressBar
+        passed={done}
+        total={GUIDE_STEPS.length}
+        unit="pasos"
+        doneLabel="Guía completa"
+      />
       <ol className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
         {GUIDE_STEPS.map((step, index) => {
           const checked = guideChecks[step.id] ?? false
@@ -222,6 +203,7 @@ export default function ChecklistPanel({ tab, onTabChange }: Props) {
   const tabs: { id: ChecklistTab; label: string }[] = [
     { id: 'validation', label: 'Validación' },
     { id: 'guide', label: 'Guía' },
+    { id: 'requirements', label: 'Requisitos' },
   ]
 
   return (
@@ -243,7 +225,9 @@ export default function ChecklistPanel({ tab, onTabChange }: Props) {
         ))}
       </div>
       <div className="flex min-h-0 flex-1 flex-col pt-3">
-        {tab === 'validation' ? <ValidationTab /> : <GuideTab />}
+        {tab === 'validation' && <ValidationTab />}
+        {tab === 'guide' && <GuideTab />}
+        {tab === 'requirements' && <RequirementsTab />}
       </div>
     </div>
   )

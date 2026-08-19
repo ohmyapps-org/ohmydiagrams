@@ -27,6 +27,7 @@ import {
   type AlignAxis,
   type Point,
 } from '../uml/geometry'
+import type { Fragment } from '../uml/templates'
 import { pushHistory, takeSnapshot, type Snapshot } from './history'
 import { createDebouncedStorage } from './storage'
 
@@ -122,7 +123,10 @@ export interface DocumentStore {
 
   addNode: (kind: UmlNodeKind, position: Point, label?: string) => UmlNode
   addEdge: (kind: UmlEdgeKind, source: string, target: string) => void
+  /** Drops a ready-made group of elements as one undoable step. */
+  insertFragment: (fragment: Fragment) => void
   updateNodeData: (id: string, patch: Partial<UmlNodeData>) => void
+  moveNode: (id: string, position: Point) => void
   updateNodeKind: (id: string, kind: UmlNodeKind) => void
   updateEdgeData: (id: string, patch: Partial<UmlEdgeData>) => void
   updateEdgeKind: (id: string, kind: UmlEdgeKind) => void
@@ -269,6 +273,29 @@ export const useDocument = create<DocumentStore>()(
         addEdge: (kind, source, target) =>
           mutate((state) => ({
             edges: [...state.edges, createEdge(kind, source, target)],
+          })),
+
+        insertFragment: (fragment) =>
+          mutate((state) => {
+            if (fragment.nodes.length === 0) return null
+            return {
+              nodes: [
+                ...state.nodes.map((node) =>
+                  node.selected ? { ...node, selected: false } : node,
+                ),
+                ...fragment.nodes.map((node) => ({ ...node, selected: true })),
+              ],
+              edges: [...state.edges, ...fragment.edges],
+            }
+          }),
+
+        moveNode: (id, position) =>
+          mutate((state) => ({
+            nodes: state.nodes.map((node) =>
+              node.id === id
+                ? { ...node, position: { x: snap(position.x), y: snap(position.y) } }
+                : node,
+            ),
           })),
 
         updateNodeData: (id, patch) =>
