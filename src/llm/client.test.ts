@@ -13,6 +13,12 @@ test('keeps an explicit api version', () => {
   )
 })
 
+test('appends the route directly after Gemini\'s /openai compatibility segment', () => {
+  expect(chatEndpoint('https://generativelanguage.googleapis.com/v1beta/openai')).toBe(
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  )
+})
+
 test('accepts the full route and a trailing slash', () => {
   expect(chatEndpoint('https://mi-vps.com/v1/chat/completions')).toBe(
     'https://mi-vps.com/v1/chat/completions',

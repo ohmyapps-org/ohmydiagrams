@@ -13,7 +13,10 @@ const DEFAULT_TIMEOUT_MS = 60_000
 export function chatEndpoint(baseUrl: string): string {
   const base = baseUrl.trim().replace(/\/+$/, '')
   if (base.endsWith('/chat/completions')) return base
-  if (/\/v\d+$/.test(base)) return `${base}/chat/completions`
+  // `/v1` (OpenAI, xAI, most self-hosted servers) and `/openai` (Google's
+  // Gemini compatibility layer) both mark a base that already ends at its
+  // version segment: just append the route, don't insert another `/v1`.
+  if (/\/(v\d+|openai)$/.test(base)) return `${base}/chat/completions`
   return `${base}/v1/chat/completions`
 }
 
