@@ -292,6 +292,10 @@ export default function Canvas({ onOpenGuide }: Props) {
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode={null}
         colorMode={theme}
+        // Z order is the document's, not the selection's: raising a selected
+        // boundary to the top would put its frosted pane over the very use
+        // cases it contains. "Traer al frente" is the explicit way to reorder.
+        elevateNodesOnSelect={false}
         connectionMode={ConnectionMode.Loose}
         // Double click drops a text label instead of zooming.
         zoomOnDoubleClick={false}

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useAgentActivity } from '../store/agent'
 import { useDocument } from '../store/document'
 import { toast } from '../store/toasts'
 import { runBridgeMethod } from './handlers'
@@ -8,6 +9,7 @@ import {
   BRIDGE_VERSION,
   isBridgeRequest,
   type BridgeClientMessage,
+  type BridgeMethod,
 } from './protocol'
 
 const STORAGE_KEY = 'ohmydiagrams:bridge-enabled:v1'
@@ -31,13 +33,18 @@ function send(message: BridgeClientMessage): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
 }
 
-function respond(id: string, method: string, params: unknown): void {
+function respond(id: string, method: BridgeMethod, params: unknown): void {
+  // Every tool call from any agent — local or remote — funnels through here,
+  // so this is the one place the canvas can show what is being done to it.
+  const { record } = useAgentActivity.getState()
   try {
-    // The cast is safe: `isBridgeRequest` already checked the method name, and
-    // each handler validates its own params.
+    // The cast is safe: the method is already narrowed, and each handler
+    // validates its own params.
     const result = runBridgeMethod(method as never, params as never)
+    record(method, 'ok')
     send({ type: 'response', id, ok: true, result })
   } catch (error) {
+    record(method, 'error')
     send({
       type: 'response',
       id,
@@ -106,6 +113,7 @@ export const useBridge = create<BridgeState>((set, get) => {
   const disable = (): void => {
     localStorage.setItem(STORAGE_KEY, 'off')
     set({ status: 'off' })
+    useAgentActivity.getState().reset()
     stop()
   }
 

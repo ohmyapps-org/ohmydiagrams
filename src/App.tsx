@@ -5,6 +5,7 @@ import Canvas from './canvas/Canvas'
 import { useShortcuts } from './hooks/useShortcuts'
 import { useLibrary } from './store/library'
 import { useView } from './store/view'
+import AgentActivity from './ui/AgentActivity'
 import ChecklistPanel, { type ChecklistTab } from './ui/ChecklistPanel'
 import Home from './ui/Home'
 import Palette from './ui/Palette'
@@ -42,6 +43,7 @@ function Workspace() {
         {!zen && <Palette />}
         <main className="glass relative min-w-0 flex-1 overflow-hidden rounded-panel">
           <Canvas onOpenGuide={() => setTab('guide')} />
+          <AgentActivity />
           {zen && <ZenExit />}
         </main>
         {!zen && (

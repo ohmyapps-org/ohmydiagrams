@@ -6,6 +6,7 @@ import { useLibrary } from '../store/library'
 import type { DiagramType } from '../diagrams/types'
 import type { LibraryEntry, SpecEntry } from '../types/document'
 import ConnectionsMenu from './ConnectionsMenu'
+import Skeleton from './Skeleton'
 import ThemeButton from './ThemeButton'
 
 const UNITS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
@@ -44,7 +45,7 @@ function NewCard({ type }: { type: DiagramType }) {
     <button
       type="button"
       onClick={() => createDiagram(type.kind)}
-      className="glass flex flex-col items-start gap-1.5 rounded-panel p-4 text-left transition hover:ring-1 hover:ring-accent"
+      className="glass-card flex flex-col items-start gap-1.5 rounded-panel p-4 text-left"
     >
       <span className="flex w-full items-center justify-between">
         <type.icon size={20} className="text-accent" strokeWidth={1.6} />
@@ -68,7 +69,7 @@ function DiagramCard({ entry }: { entry: LibraryEntry }) {
   const title = entry.title.trim() || 'Sin título'
 
   return (
-    <div className="glass group flex flex-col rounded-panel transition hover:ring-1 hover:ring-accent">
+    <div className="glass-card group flex flex-col rounded-panel">
       <button
         type="button"
         onClick={() => openDiagram(entry.id)}
@@ -139,6 +140,24 @@ function SpecRow({ spec }: { spec: SpecEntry }) {
   )
 }
 
+/** Placeholder row for the file currently being read. */
+function SpecRowSkeleton() {
+  return (
+    <li
+      role="status"
+      aria-busy="true"
+      aria-label="Leyendo el archivo"
+      className="flex items-center gap-2.5 px-2.5 py-2"
+    >
+      <Skeleton className="h-[15px] w-[15px] shrink-0 rounded-[3px]" />
+      <span className="min-w-0 flex-1 space-y-1.5">
+        <Skeleton className="h-3 w-[60%]" />
+        <Skeleton className="h-2.5 w-[35%]" />
+      </span>
+    </li>
+  )
+}
+
 function Section({
   title,
   action,
@@ -162,11 +181,12 @@ function Section({
 }
 
 const secondaryButton =
-  'inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-[12px] font-medium text-ink transition hover:border-accent hover:text-accent'
+  'inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-[12px] font-medium text-ink transition hover:border-accent hover:text-accent disabled:opacity-50'
 
 export default function Home() {
   const entries = useLibrary((state) => state.entries)
   const specs = useLibrary((state) => state.specs)
+  const importingSpec = useLibrary((state) => state.importingSpec)
   const importSpecFromPicker = useLibrary((state) => state.importSpecFromPicker)
 
   const recent = [...entries].sort((a, b) => b.updatedAt - a.updatedAt)
@@ -225,20 +245,22 @@ export default function Home() {
             <button
               type="button"
               className={secondaryButton}
+              disabled={importingSpec}
               onClick={() => void importSpecFromPicker()}
             >
               <FileUp size={13} />
-              Importar PDF, Markdown o TXT
+              {importingSpec ? 'Leyendo…' : 'Importar PDF, Markdown o TXT'}
             </button>
           }
         >
-          {specs.length === 0 ? (
+          {specs.length === 0 && !importingSpec ? (
             <p className="glass rounded-panel px-4 py-6 text-center text-[13px] text-muted">
               Importá una especificación y queda acá, lista para leerla desde
               cualquier diagrama.
             </p>
           ) : (
             <ul className="glass rounded-panel p-1.5">
+              {importingSpec && <SpecRowSkeleton />}
               {specs.map((spec) => (
                 <SpecRow key={spec.id} spec={spec} />
               ))}

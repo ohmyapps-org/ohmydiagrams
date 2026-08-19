@@ -12,7 +12,7 @@ export default function UseCaseNode({ id, data, selected }: NodeProps<UmlNode>) 
 
   return (
     <div
-      className={`uml-selectable flex h-full w-full items-center justify-center rounded-[50%] px-5 text-center leading-tight ${
+      className={`uml-selectable uml-glass flex h-full w-full items-center justify-center rounded-[50%] px-5 text-center leading-tight ${
         flagged ? 'uml-flagged' : ''
       }`}
       style={{

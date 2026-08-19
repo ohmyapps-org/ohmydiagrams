@@ -27,7 +27,7 @@ export default function ActorNode({ id, data, selected }: NodeProps<UmlNode>) {
       <svg
         viewBox="0 0 60 84"
         preserveAspectRatio="xMidYMid meet"
-        className="w-full flex-1"
+        className="uml-ink-shadow w-full flex-1"
         style={{ minHeight: 0 }}
         aria-hidden
       >

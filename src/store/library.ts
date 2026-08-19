@@ -138,6 +138,8 @@ interface LibraryState {
   specs: SpecEntry[]
   /** `null` means the home view: no document is open. */
   activeId: string | null
+  /** True while a picked file is being read, which for a PDF takes a while. */
+  importingSpec: boolean
 
   createDiagram: (kind: DiagramKind) => void
   openDiagram: (id: string) => void
@@ -180,6 +182,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
     entries: initial.entries,
     specs: initial.specs,
     activeId: initial.activeId,
+    importingSpec: false,
 
     createDiagram: (kind) => {
       const id = nextId('doc')
@@ -254,6 +257,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
     importSpecFromPicker: async () => {
       const file = await pickFile(REQUIREMENTS_ACCEPT)
       if (!file) return
+      set({ importingSpec: true })
       try {
         get().addSpec(file.name, await readRequirementsFile(file))
         toast.success(`"${file.name}" guardado en tus requisitos.`)
@@ -261,6 +265,8 @@ export const useLibrary = create<LibraryState>((set, get) => {
         toast.error(
           error instanceof Error ? error.message : 'No se pudo leer el archivo.',
         )
+      } finally {
+        set({ importingSpec: false })
       }
     },
 

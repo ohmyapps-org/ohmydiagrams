@@ -66,6 +66,7 @@ function resolveVar(cssVar: string): string {
     'var(--uml-note-fill)': PALETTE.noteFill,
     'var(--uml-note-stroke)': PALETTE.noteStroke,
     'var(--app-surface)': PALETTE.shapeFill,
+    'var(--uml-shape-fill)': PALETTE.shapeFill,
   }
   return map[cssVar] ?? cssVar
 }

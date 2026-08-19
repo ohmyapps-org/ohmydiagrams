@@ -17,7 +17,7 @@ export default function BoundaryNode({ id, data, selected }: NodeProps<UmlNode>)
 
   return (
     <div
-      className={`uml-selectable flex h-full w-full flex-col rounded-[10px] ${
+      className={`uml-selectable uml-glass flex h-full w-full flex-col rounded-[10px] ${
         flagged ? 'uml-flagged' : ''
       }`}
       style={{

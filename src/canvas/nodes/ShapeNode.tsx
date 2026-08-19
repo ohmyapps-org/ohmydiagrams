@@ -11,7 +11,7 @@ export default function ShapeNode({ id, type, data, selected }: NodeProps<UmlNod
   const { editing, setEditing, commitLabel } = useNodeEditing(id)
   const flagged = useFlagged(id)
 
-  const fill = data.fill ?? 'var(--app-surface)'
+  const fill = data.fill ?? 'var(--uml-shape-fill)'
   const stroke = data.stroke ?? 'var(--uml-ink)'
   const dash = data.lineStyle === 'dashed' ? '6 4' : undefined
 
@@ -21,8 +21,10 @@ export default function ShapeNode({ id, type, data, selected }: NodeProps<UmlNod
       onDoubleClick={() => setEditing(true)}
     >
       <ResizeFrame kind={kind} selected={selected ?? false} />
+      {/* Frosted layer clipped to the silhouette, behind the drawn shape. */}
+      <div className={`uml-glass-layer uml-glass-layer--${kind}`} aria-hidden />
       <svg
-        className="absolute inset-0 h-full w-full"
+        className="uml-ink-shadow absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden

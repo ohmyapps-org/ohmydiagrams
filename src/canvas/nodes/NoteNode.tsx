@@ -23,7 +23,7 @@ export default function NoteNode({ id, data, selected }: NodeProps<UmlNode>) {
       {/* The fold is a CSS corner cut plus a triangle overlay, which survives
           arbitrary resizing better than a fixed viewBox path. */}
       <div
-        className="h-full w-full"
+        className="uml-glass h-full w-full"
         style={{
           background: fill,
           border: `1.4px ${data.lineStyle} ${stroke}`,

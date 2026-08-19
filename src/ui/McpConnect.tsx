@@ -1,7 +1,9 @@
-import { AlertCircle, Check, Copy, Loader2, X } from 'lucide-react'
+import { AlertCircle, Check, Copy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from '../store/toasts'
+import Skeleton from './Skeleton'
+import ThinkingOrb, { type OrbTone } from './ThinkingOrb'
 
 interface Platform {
   name: string
@@ -57,13 +59,19 @@ function useConnectorStatus(url: string): Status {
   return status
 }
 
+/** The orb's mood mirrors the probe: still looking, found, or nothing there. */
+const ORB_TONE: Record<Status, OrbTone> = {
+  checking: 'thinking',
+  ready: 'ok',
+  unavailable: 'error',
+}
+
 function StatusLine({ status }: { status: Status }) {
   if (status === 'checking') {
     return (
-      <p className="flex items-center gap-1.5 text-[11.5px] text-muted">
-        <Loader2 size={12} className="animate-spin" />
-        Revisando este servidor…
-      </p>
+      <div role="status" aria-busy="true" aria-label="Revisando este servidor">
+        <Skeleton className="h-2.5 w-48" />
+      </div>
     )
   }
   if (status === 'ready') {
@@ -74,12 +82,14 @@ function StatusLine({ status }: { status: Status }) {
       </p>
     )
   }
+  // Not a flex row: the sentence wraps around inline code, and every bare text
+  // node in a flex container would become its own column.
   return (
-    <p className="flex items-start gap-1.5 text-[11.5px] leading-snug text-warn">
-      <AlertCircle size={12} className="mt-0.5 shrink-0" />
+    <p className="text-[11.5px] leading-snug text-warn">
+      <AlertCircle size={12} className="mr-1 inline-block align-[-2px]" />
       Este servidor todavía no tiene el conector configurado (falta{' '}
-      <code className="text-[10.5px]">OHMYDIAGRAMS_OWNER_TOKEN</code> en el despliegue). La URL de
-      abajo no va a funcionar hasta entonces.
+      <code className="text-[10.5px]">OHMYDIAGRAMS_OWNER_TOKEN</code> en el
+      despliegue). La URL de abajo no va a funcionar hasta entonces.
     </p>
   )
 }
@@ -122,7 +132,13 @@ export default function McpConnect({ onClose }: { onClose: () => void }) {
         className="glass w-[26rem] max-w-full rounded-panel p-4"
       >
         <div className="mb-3 flex items-start justify-between gap-2">
-          <div>
+          <ThinkingOrb
+            size={30}
+            tone={ORB_TONE[status]}
+            busy={status === 'checking'}
+            className="mt-0.5"
+          />
+          <div className="min-w-0 flex-1">
             <h2 className="text-[13.5px] font-semibold text-ink">Conectar tu plataforma de IA</h2>
             <p className="mt-0.5 text-[11.5px] leading-snug text-muted">
               Pegá esta URL en los conectores de Claude, ChatGPT, Gemini o Grok. Vas a autorizar

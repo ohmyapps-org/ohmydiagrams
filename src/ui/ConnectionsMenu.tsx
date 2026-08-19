@@ -3,17 +3,22 @@ import type { ReactNode } from 'react'
 import { useRef, useState } from 'react'
 import { useBridge, type BridgeStatus } from '../bridge/client'
 import MenuShell from '../canvas/MenuShell'
+import { useAgentActivity } from '../store/agent'
 import { useLlm } from '../store/llm'
 import LlmSettings from './LlmSettings'
 import McpConnect from './McpConnect'
+import ThinkingOrb, { type OrbTone } from './ThinkingOrb'
 
 /** Matches the `w-[19.5rem]` the menu renders at, for right-edge alignment. */
 const MENU_WIDTH_PX = 19.5 * 16
 
-const BRIDGE_STATE: Record<BridgeStatus, { label: string; tone: string }> = {
-  off: { label: 'Sin conectar', tone: 'text-faint' },
-  connecting: { label: 'Buscando…', tone: 'text-warn' },
-  connected: { label: 'Conectado', tone: 'text-ok' },
+const BRIDGE_STATE: Record<
+  BridgeStatus,
+  { label: string; tone: string; orb: OrbTone }
+> = {
+  off: { label: 'Sin conectar', tone: 'text-faint', orb: 'idle' },
+  connecting: { label: 'Buscando…', tone: 'text-warn', orb: 'thinking' },
+  connected: { label: 'Conectado', tone: 'text-ok', orb: 'ok' },
 }
 
 function Row({
@@ -67,6 +72,7 @@ export default function ConnectionsMenu() {
 
   const status = useBridge((state) => state.status)
   const toggleBridge = useBridge((state) => state.toggle)
+  const busy = useAgentActivity((state) => state.busy)
   const configured = useLlm((state) => state.configured)
 
   const bridge = BRIDGE_STATE[status]
@@ -85,7 +91,11 @@ export default function ConnectionsMenu() {
         <span className="relative flex">
           <Plug size={15} />
           {linked && (
-            <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-ok" />
+            <ThinkingOrb
+              size={8}
+              tone={busy ? 'thinking' : 'ok'}
+              className="absolute -right-1 -top-1"
+            />
           )}
         </span>
         Conexiones
@@ -112,9 +122,19 @@ export default function ConnectionsMenu() {
             }}
           />
           <Row
-            icon={<Plug size={15} />}
+            icon={
+              status === 'off' ? (
+                <Plug size={15} />
+              ) : (
+                <ThinkingOrb
+                  size={15}
+                  tone={busy ? 'thinking' : bridge.orb}
+                  busy={busy}
+                />
+              )
+            }
             title="Agente MCP local"
-            state={bridge.label}
+            state={busy ? 'Trabajando…' : bridge.label}
             tone={bridge.tone}
             description={
               status === 'off'

@@ -9,12 +9,12 @@ import { nodeKindOf } from '../types/uml'
 import { nextUseCaseSlot } from '../uml/placement'
 import { normalizeName } from '../uml/verbs'
 import ProgressBar from './ProgressBar'
+import Skeleton, { SkeletonBlock } from './Skeleton'
 
 /** Specs already in the library, so a second diagram can reuse the reading. */
 function SavedSpecs() {
   const specs = useLibrary((state) => state.specs)
   const importSaved = useRequirements((state) => state.importSaved)
-  const status = useRequirements((state) => state.status)
 
   if (specs.length === 0) return null
 
@@ -27,9 +27,8 @@ function SavedSpecs() {
         <button
           key={spec.id}
           type="button"
-          disabled={status === 'reading'}
           onClick={() => void importSaved(spec.id)}
-          className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12px] text-ink transition hover:bg-accent-soft disabled:opacity-40"
+          className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12px] text-ink transition hover:bg-accent-soft"
         >
           <FileText size={13} className="shrink-0 text-faint" />
           <span className="truncate">{spec.name}</span>
@@ -40,7 +39,6 @@ function SavedSpecs() {
 }
 
 function EmptyState() {
-  const status = useRequirements((state) => state.status)
   const importFromPicker = useRequirements((state) => state.importFromPicker)
   const configured = useLlm((state) => state.configured)
   const model = useLlm((state) => state.config.model)
@@ -55,11 +53,10 @@ function EmptyState() {
       <button
         type="button"
         onClick={() => void importFromPicker()}
-        disabled={status === 'reading'}
-        className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-[12px] font-medium text-ink transition hover:border-accent hover:text-accent disabled:opacity-40"
+        className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-[12px] font-medium text-ink transition hover:border-accent hover:text-accent"
       >
         <FileUp size={13} />
-        {status === 'reading' ? 'Leyendo…' : 'Importar PDF, Markdown o TXT'}
+        Importar PDF, Markdown o TXT
       </button>
       <p className="text-[11px] leading-snug text-faint">
         {configured
@@ -67,6 +64,43 @@ function EmptyState() {
           : 'La lectura es local: el archivo no sale del navegador.'}
       </p>
     </div>
+  )
+}
+
+/**
+ * Reading a PDF and running it past a model takes seconds, so the wait is drawn
+ * in the shape of the checklist that is coming: the panel settles once.
+ */
+function ReadingState() {
+  const sourceName = useRequirements((state) => state.sourceName)
+
+  return (
+    <SkeletonBlock
+      label="Leyendo la especificación"
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div className="px-3.5 pb-3 pt-3">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <Skeleton className="h-3 w-32" />
+        </div>
+        <Skeleton className="h-1.5 w-full rounded-full" />
+      </div>
+      <p className="truncate px-3.5 pb-2 text-[11px] text-faint">
+        Leyendo {sourceName ?? 'el archivo'}…
+      </p>
+      <ul className="min-h-0 flex-1 overflow-hidden px-1.5">
+        {[0, 1, 2, 3].map((row) => (
+          <li key={row} className="flex gap-2.5 px-2.5 py-2">
+            <Skeleton className="mt-0.5 h-[15px] w-[15px] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-[85%]" />
+              <Skeleton className="h-2.5 w-[55%]" />
+            </div>
+            <Skeleton className="mt-0.5 h-6 w-16 shrink-0 rounded-control" />
+          </li>
+        ))}
+      </ul>
+    </SkeletonBlock>
   )
 }
 
@@ -152,6 +186,7 @@ function CandidateRow({
  */
 export default function RequirementsTab() {
   const candidates = useRequirements((state) => state.candidates)
+  const status = useRequirements((state) => state.status)
   const sourceName = useRequirements((state) => state.sourceName)
   const extractorLabel = useRequirements((state) => state.extractorLabel)
   const importFromPicker = useRequirements((state) => state.importFromPicker)
@@ -166,6 +201,7 @@ export default function RequirementsTab() {
     return names
   }, [nodes])
 
+  if (status === 'reading') return <ReadingState />
   if (candidates.length === 0) return <EmptyState />
 
   const present = candidates.filter((item) => drawn.has(normalizeName(item.name)))
