@@ -67,16 +67,38 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   configurado corre la implementación local y determinista, y con uno conectado
   corre el modelo, sin cambiar nada de la interfaz de usuario.
 
-**Modelo (opcional)**
-- El menú "Conexiones" de la barra superior tiene las dos conexiones salientes,
-  dichas con todas las letras: el modelo de IA y el agente MCP.
-- Conecta cualquier servidor con API
-  compatible con OpenAI: URL base, nombre del modelo y clave opcional. Sirve
-  igual para un contenedor propio en un VPS (Ollama, vLLM, LM Studio) que para
-  OpenAI, Anthropic u OpenRouter.
+**Agentes (MCP)**
+- Servidor MCP que expone el lienzo abierto a un agente: leer el diagrama,
+  crear y conectar elementos, renombrar, borrar y consultar la checklist.
+- **Conector remoto por URL**, que es el camino principal: se pega la URL
+  pública `https://<tu-dominio>/mcp` en los conectores de Claude, ChatGPT,
+  Gemini o Grok y la plataforma maneja el diagrama abierto en tu navegador, sin
+  correr nada en tu máquina. El diálogo revisa solo si el servidor tiene el
+  conector configurado antes de darte la URL.
+- Detrás de esa URL hay transporte Streamable HTTP y un servidor OAuth 2.1
+  mínimo (`mcp/oauth.ts`): registro dinámico de clientes (RFC 7591), código de
+  autorización con PKCE, refresh tokens rotativos y descubrimiento
+  (RFC 8414 / 9728). Como no hay cuentas, el consentimiento es una frase de paso
+  única, `OHMYDIAGRAMS_OWNER_TOKEN`, que se tipea del lado de la plataforma y
+  nunca dentro de la app.
+- **Puente local por stdio** para un agente que corre en tu máquina (Claude Code
+  y compañía). Es opt-in desde el menú "Conexiones" y el socket escucha sólo en
+  loopback.
+- Las relaciones inválidas también se rechazan por estas dos vías, con la misma
+  explicación de la regla que ve una persona. Ver [`mcp/README.md`](mcp/README.md).
+- Todo el lado remoto queda inerte si no se define `OHMYDIAGRAMS_OWNER_TOKEN`:
+  sin esa variable el servidor se comporta como siempre (stdio y WebSocket de
+  loopback) y `/mcp` no existe.
+
+**Modelo propio (avanzado)**
+- La otra conexión saliente, ahora detrás del enlace "Avanzado" del menú
+  "Conexiones": la app llamando a un modelo con tu propia clave.
+- Cuatro botones de un clic (Claude, GPT, Gemini y Grok) completan la URL base y
+  un modelo por defecto; el campo de URL cruda queda detrás de "Avanzado" para
+  Ollama, vLLM, LM Studio, OpenRouter o un VPS propio.
 - Sólo hace falta que responda en `POST {URL base}/chat/completions`. La URL se
-  normaliza sola: `http://vps:11434`, `.../v1` y la ruta completa son la misma
-  cosa.
+  normaliza sola: `http://vps:11434`, `.../v1`, la ruta de compatibilidad de
+  Gemini (`/v1beta/openai`) y la ruta completa son la misma cosa.
 - "Probar conexión" hace una consulta mínima que valida URL, clave y modelo de
   una sola vez, y muestra el error del servidor tal como llega.
 - Se usa para leer la especificación de requisitos: ahí el texto del archivo se
@@ -85,14 +107,6 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
 - La configuración (clave incluida) vive en `localStorage` y las llamadas salen
   del navegador, así que el servidor tiene que permitir CORS desde el origen
   donde esté publicada la app.
-
-**Agentes (MCP)**
-- Servidor MCP que expone el lienzo abierto a un agente: leer el diagrama,
-  crear y conectar elementos, renombrar, borrar y consultar la checklist.
-- Las relaciones inválidas también se rechazan por esta vía, con la misma
-  explicación de la regla que ve una persona.
-- La conexión es opt-in desde el menú "Conexiones" de la barra superior y el
-  socket escucha sólo en loopback. Ver [`mcp/README.md`](mcp/README.md).
 
 **Persistencia y exportación**
 - Autoguardado en `localStorage` con escritura diferida: un índice con la
@@ -127,6 +141,19 @@ Para exponer el lienzo a un agente, con la app abierta en el navegador:
 bun run mcp
 ```
 
+Eso levanta el puente local (stdio + WebSocket en `127.0.0.1:7823`). Para habilitar
+además el conector remoto por URL, definí la frase de paso antes de arrancarlo:
+
+```bash
+OHMYDIAGRAMS_OWNER_TOKEN='una frase larga' bun run mcp
+```
+
+| Variable | Para qué |
+| --- | --- |
+| `OHMYDIAGRAMS_OWNER_TOKEN` | Habilita `/mcp` y el OAuth. Sin ella el conector remoto no existe. |
+| `OHMYDIAGRAMS_BRIDGE_PORT` | Puerto del puente (por defecto `7823`). Va en los dos lados. |
+| `OHMYDIAGRAMS_BRIDGE_HOST` | Interfaz donde escucha. Por defecto `127.0.0.1`; cambiala sólo detrás de un proxy. |
+
 ## Arquitectura
 
 ```
@@ -143,7 +170,9 @@ src/
   requirements/   Lectura de PDF/Markdown/TXT y extracción de casos de uso
   llm/            Cliente de chat compatible con OpenAI y forma de la conexión
   bridge/         Protocolo y cliente del puente con el servidor MCP
-mcp/              Servidor MCP (Bun + stdio) y host del WebSocket local
+mcp/              Servidor MCP: stdio (server.ts), WebSocket de loopback
+                  (bridge.ts), endpoint remoto Streamable HTTP (mcpHttp.ts) y el
+                  servidor OAuth 2.1 que lo protege (oauth.ts)
 ```
 
 Cinco decisiones sostienen el resto:
@@ -166,6 +195,33 @@ Cinco decisiones sostienen el resto:
    conoce el diagrama abierto; `store/library.ts` escucha sus cambios y los
    escribe en el archivo del documento activo. Por eso abrir uno reinicia el
    historial: el undo nunca cruza de un diagrama a otro.
+
+## Despliegue
+
+El despliegue es automático: cada push a `main` dispara
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), que corre en un
+runner self-hosted y ejecuta el script de despliegue del servidor
+(`~/deploy/ohmy.sh diagrams`). El workflow usa un grupo de concurrencia, así que
+dos pushes seguidos no pisan un despliegue a medio hacer: el anterior se cancela.
+
+Nada se despliega desde `dev`. El flujo es trabajar en `dev` y promover a `main`
+cuando `bun run typecheck && bunx oxlint . && bun test && bun run build` pasan
+limpio.
+
+La aplicación es estática (`bun run build` deja todo en `dist/`), pero el
+conector remoto de MCP **no** lo es: la app arma su URL como
+`window.location.origin + '/mcp'`, así que para que ese camino funcione el
+servidor tiene que, además de servir `dist/`, correr `bun mcp/server.ts` con
+`OHMYDIAGRAMS_OWNER_TOKEN` definido y proxear hacia él `/mcp`, `/authorize`,
+`/token`, `/register` y `/.well-known/oauth-*`. Sin eso la app sigue andando
+entera y el diálogo del conector avisa que ese servidor todavía no lo tiene
+configurado.
+
+El puente escucha en `127.0.0.1` aunque la frase de paso esté definida, que es
+lo que se quiere si el proxy corre en la misma máquina. Sólo si el proxy está en
+otro host hace falta `OHMYDIAGRAMS_BRIDGE_HOST=0.0.0.0`, y en ese caso el puerto
+no puede quedar expuesto directamente: `/mcp` pide token, pero el WebSocket del
+puente no.
 
 ## Estado del proyecto
 

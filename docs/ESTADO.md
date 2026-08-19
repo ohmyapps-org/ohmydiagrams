@@ -20,7 +20,11 @@ bun run typecheck && bunx oxlint . && bun test && bun run build
 
 Los cuatro pasan limpio. No hay backend ni cuentas: los documentos viven en
 `localStorage` del navegador. El único proceso extra es el servidor MCP
-(`bun run mcp`), que tampoco guarda estado.
+(`bun run mcp`), que tampoco guarda estado en disco. Desde que existe el
+conector remoto ese proceso puede además atender HTTP (`/mcp` y el OAuth), pero
+sólo si se define `OHMYDIAGRAMS_OWNER_TOKEN`; sin esa variable no cambia nada y
+todo lo que registre (clientes, tokens) se pierde al reiniciar, porque también
+vive en memoria.
 
 ## Lo último que se hizo (sesión 2026-08-19)
 
@@ -47,6 +51,27 @@ Los cuatro pasan limpio. No hay backend ni cuentas: los documentos viven en
   automatización. Los tres últimos dibujan con formas genéricas y todavía no
   tienen reglas ni guía; la interfaz se adapta sola porque lee del registro.
 - **Modo zen** (tecla `Z` o el botón de la barra): sólo el lienzo.
+- **Conector remoto de MCP por OAuth** (`mcp/mcpHttp.ts`, `mcp/oauth.ts`): un
+  endpoint `/mcp` con transporte Streamable HTTP, un `McpServer` por sesión, los
+  dos compartiendo el mismo `CanvasBridge` que ya existía, y adelante un servidor
+  OAuth 2.1 mínimo (registro dinámico RFC 7591, código + PKCE, refresh rotativo,
+  descubrimiento RFC 8414/9728). Con esto Claude.ai, ChatGPT, Gemini y Grok
+  pueden agregar este lienzo pegando una URL pública, sin nada corriendo en la
+  máquina del usuario. Como no hay cuentas, el consentimiento es una frase de
+  paso: `OHMYDIAGRAMS_OWNER_TOKEN`. Todo el camino remoto está **apagado por
+  defecto**: sin esa variable el servidor se comporta igual que antes.
+- **El menú "Conexiones" cambió de orden**: adelante el conector remoto
+  (`ui/McpConnect.tsx`) y el puente local por stdio; BYOK bajó a un enlace
+  "Avanzado", porque pasó a ser el camino de respaldo y no el principal.
+- **Botones de un clic para Claude, GPT, Gemini y Grok** en el diálogo de BYOK
+  (`ui/LlmSettings.tsx`): completan URL base y modelo por defecto. El campo de
+  URL cruda quedó detrás de "Avanzado" para Ollama / vLLM / LM Studio /
+  OpenRouter / VPS propio. De paso se arregló `chatEndpoint()`, que le pegaba un
+  `/v1` de más a la ruta de compatibilidad de Gemini (`/v1beta/openai`), porque
+  no termina en `/v<n>`.
+- **Despliegue automático** (`.github/workflows/deploy.yml`): push a `main` →
+  runner self-hosted → `~/deploy/ohmy.sh diagrams`. Ver la sección
+  "Despliegue" más abajo.
 
 ## Qué está hecho
 
@@ -143,6 +168,58 @@ Esta distinción es lo más importante de este documento.
   casos de uso.
 - Las reglas 6, 9, 10, 11, 12, 13, 14, 15 y 17 no se vieron pasar de verde a
   rojo en vivo. La lógica es pura y está en `uml/validation.ts`.
+- **El conector remoto de MCP de punta a punta.** Es lo más grande sin verificar
+  de esta tanda: compila, pasa lint y tests, y el camino local (stdio + WS) sigue
+  ejercitado, pero nadie agregó todavía la URL desde Claude, ChatGPT, Gemini o
+  Grok reales. Falta ver el ciclo completo: descubrimiento →
+  `/register` → `/authorize` con la frase de paso → `/token` → una llamada a una
+  herramienta sobre el lienzo abierto, más la rotación del refresh token. Hasta
+  que eso se haga contra una plataforma de verdad, tratalo como no probado.
+- **El despliegue.** El workflow nunca corrió: se agrega junto con este merge, y
+  el primer push a `main` es el que lo estrena. El script del servidor
+  (`~/deploy/ohmy.sh`) vive en el runner, no en este repositorio, así que desde
+  acá no se puede saber si además del estático levanta el proceso de MCP.
+- **Los cuatro botones de proveedor** de `ui/LlmSettings.tsx` no se probaron
+  contra las APIs reales; sí hay test unitario del armado de la URL
+  (`llm/client.test.ts`, incluido el caso de Gemini).
+
+## Despliegue
+
+Ramas: se trabaja en `dev` y se promueve a `main`. **Sólo `main` despliega.**
+
+`.github/workflows/deploy.yml` escucha el push a `main`, corre en un runner
+self-hosted y ejecuta `bash /home/hermes/deploy/ohmy.sh diagrams`. Tiene
+`concurrency: deploy-diagrams` con `cancel-in-progress`, así que dos pushes
+seguidos no dejan dos despliegues pisándose. No hay paso de `checkout`: el
+script del servidor se trae el código por su cuenta.
+
+Antes de promover a `main`, los cuatro de siempre tienen que pasar limpio:
+
+```bash
+bun run typecheck && bunx oxlint . && bun test && bun run build
+```
+
+**Lo que el servidor necesita además del estático.** `bun run build` deja una
+aplicación completamente estática en `dist/`, y con eso alcanza para todo menos
+para una cosa: el conector remoto de MCP. La app arma su URL como
+`window.location.origin + '/mcp'`, así que ese origen tiene que además correr
+`bun mcp/server.ts` con `OHMYDIAGRAMS_OWNER_TOKEN` definido y proxear hacia él
+`/mcp`, `/authorize`, `/token`, `/register` y `/.well-known/oauth-*`. Sin eso la
+app anda entera y el diálogo del conector lo dice solo: consulta
+`/.well-known/oauth-protected-resource/mcp` y muestra "este servidor todavía no
+tiene el conector configurado".
+
+Ojo con ese chequeo, que ya tuvo su trampa: un hosting estático con fallback a
+`index.html` (y el dev server de Vite hace lo mismo) responde 200 en cualquier
+ruta, así que mirar el código de estado no alcanza. Por eso `useConnectorStatus`
+además parsea el cuerpo y exige que traiga un `resource` de tipo string.
+
+Y una segunda trampa, esta sin descubrir todavía porque el despliegue no se
+probó: **el puente sigue atado a `127.0.0.1` aunque definas la frase de paso**.
+Con el proxy inverso en la misma máquina eso alcanza y es lo que conviene. Si el
+proxy vive en otro host o en otro contenedor, hay que agregar
+`OHMYDIAGRAMS_BRIDGE_HOST=0.0.0.0`, y ahí el puerto no puede quedar expuesto
+directamente: `/mcp` pide token, pero el WebSocket del puente (`/bridge`) no.
 
 ## Trampa del entorno de prueba (leer antes de depurar)
 
@@ -211,7 +288,17 @@ Dos consecuencias prácticas:
    `loadDocument` limpia el historial, porque el undo no debe cruzar de un
    diagrama a otro.
 
-8. **La extracción de requisitos está detrás de una interfaz**
+8. **El conector remoto no es un servidor aparte, es el mismo puente.** `/mcp`
+   levanta un `McpServer` por sesión pero todos comparten el `CanvasBridge` que
+   ya usaba stdio, así que hay un solo camino hacia el lienzo y las herramientas
+   se registran una sola vez (`mcp/tools.ts`). Dos cosas que conviene no romper:
+   el lado remoto está **apagado si no hay `OHMYDIAGRAMS_OWNER_TOKEN`**, para que
+   nadie exponga el lienzo sin querer, y el estado del OAuth es en memoria a
+   propósito, igual que el resto de `mcp/`: no hay base de datos que migrar y un
+   reinicio limpia clientes y tokens. Si algún día hace falta que sobrevivan al
+   reinicio, el punto único a tocar son los mapas de `mcp/oauth.ts`.
+
+9. **La extracción de requisitos está detrás de una interfaz**
    (`requirements/types.ts`). La implementación que se envía es local y
    determinista; `setRequirementExtractor` permite cambiarla por una con modelo
    sin tocar la interfaz. La versión local **no traduce ni inventa**: si la
@@ -249,11 +336,19 @@ Dos consecuencias prácticas:
 
 **Siguiente en la lista (backlog del 2026-08-19)**
 
+- **Probar el conector remoto contra una plataforma real** (Claude, ChatGPT,
+  Gemini o Grok) sobre el sitio ya desplegado. Es lo primero, porque es la
+  función más grande sin una sola verificación.
+- **Confirmar que el servidor sirve `/mcp`**, no sólo el estático: el workflow
+  despliega, pero el conector remoto necesita el proceso de MCP con
+  `OHMYDIAGRAMS_OWNER_TOKEN` y el proxy de las rutas de OAuth. La forma rápida
+  de chequearlo es abrir el diálogo del conector y ver si dice "activo".
 - **Compartir por link**, **guardado en la nube con cuenta de GitHub/Google** y
-  **colaboración en vivo hasta 4 personas**. Los tres necesitan backend y una
-  decisión de hosting. El paso previo ya está hecho: cada documento tiene id
-  propio y la biblioteca es el único lugar que escribe. Lo que falta del lado
-  del cliente es que `store/library.ts` pueda tener otro respaldo además de
+  **colaboración en vivo hasta 4 personas**. Los tres necesitan backend. La
+  decisión de hosting ya no está abierta (VPS propio, desplegado por el
+  workflow), y el paso previo del lado del cliente también está hecho: cada
+  documento tiene id propio y la biblioteca es el único lugar que escribe. Lo
+  que falta es que `store/library.ts` pueda tener otro respaldo además de
   `localStorage`.
 - **Onboarding** (explícitamente fuera del alcance de esta tanda).
 - Notación propia para flujo, QA y automatización: hoy son entradas del registro
@@ -274,8 +369,10 @@ Dos consecuencias prácticas:
   `export/svg.ts` y `uml/placement.ts`, que ya tuvo un bug real de coordenadas
   sin ajustar. `store/library.ts` necesita `localStorage`, así que hoy sólo se
   verifica en el navegador.
-- El bundle principal quedó en 545 kB (175 kB con gzip). React Flow sigue siendo
-  la mayor parte; pdf.js ya está en su propio chunk perezoso de 427 kB.
+- El bundle principal quedó en 552 kB (177 kB con gzip). React Flow sigue siendo
+  la mayor parte; pdf.js ya está en su propio chunk perezoso de 427 kB. Las
+  marcas de los cuatro proveedores son `.webp` en `public/`, así que no entran
+  al bundle.
 - El menú rápido no usa `onPaneContextMenu`: React Flow ignora ese callback
   cuando `panOnDrag` incluye el botón derecho, así que el evento se escucha en
   el contenedor y se descarta si el puntero viajó más de `PAN_SLOP_PX` entre

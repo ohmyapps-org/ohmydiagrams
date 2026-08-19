@@ -2,8 +2,12 @@
 
 Deja que un agente lea y edite el diagrama **abierto en el navegador**.
 
+Hay dos caminos hacia el mismo lienzo:
+
 ```
-agente  ⇄ stdio ⇄  mcp/server.ts  ⇄ WebSocket ⇄  pestaña del navegador
+agente local     ⇄ stdio ⇄                      ┐
+                                 mcp/server.ts ⇄ WebSocket ⇄ pestaña del navegador
+Claude / ChatGPT ⇄ HTTPS /mcp ⇄ (OAuth 2.1)     ┘
 ```
 
 El documento vive en el navegador y en ningún otro lado. El servidor no guarda
@@ -26,6 +30,46 @@ claude mcp add ohmydiagrams -- bun E:/Proyectos/OhMyOrg/ohmydiagrams/mcp/server.
 El socket escucha sólo en `127.0.0.1:7823`, la conexión la inicia el navegador
 y el botón es opt-in: nada se conecta sin que lo pidas. Para cambiar el puerto,
 definí `OHMYDIAGRAMS_BRIDGE_PORT` en los dos lados.
+
+## Conector remoto (Claude, ChatGPT, Gemini, Grok)
+
+Esas cuatro plataformas aceptan un servidor MCP remoto pegando una URL pública,
+sin nada corriendo en la máquina del usuario. Para habilitarlo alcanza con
+definir una frase de paso antes de arrancar el servidor:
+
+```bash
+OHMYDIAGRAMS_OWNER_TOKEN='una frase larga' bun mcp/server.ts
+```
+
+Con esa variable, el mismo proceso empieza a atender HTTP en el puerto del
+puente:
+
+| Ruta | Qué es |
+| --- | --- |
+| `/mcp` | El servidor MCP, transporte Streamable HTTP, un `McpServer` por sesión |
+| `/.well-known/oauth-authorization-server` | Descubrimiento del AS (RFC 8414) |
+| `/.well-known/oauth-protected-resource[/mcp]` | Descubrimiento del recurso (RFC 9728) |
+| `/register` | Registro dinámico de clientes (RFC 7591) |
+| `/authorize` | Página de consentimiento: pide la frase de paso |
+| `/token` | Código de autorización con PKCE y refresh rotativo |
+
+Poné esto detrás de HTTPS (las plataformas no aceptan otra cosa) y en la app
+pegá `https://<tu-dominio>/mcp`. El diálogo "Conectar tu plataforma de IA" te da
+la URL ya armada y avisa si el servidor todavía no tiene el conector activo.
+
+Tres cosas que conviene tener claras:
+
+- **Sin `OHMYDIAGRAMS_OWNER_TOKEN` no existe nada de esto.** El servidor arranca
+  igual que siempre, con stdio y el WebSocket de loopback, y `/mcp` responde 404.
+- **No hay cuentas.** La frase de paso *es* la autorización, y se tipea en la
+  página de consentimiento de este servidor, nunca dentro de la app.
+- **El estado es en memoria**, igual que el resto de `mcp/`: un reinicio borra
+  los clientes registrados y todos los tokens, y hay que volver a autorizar.
+- **Sigue escuchando en loopback**, incluso con la frase de paso definida. Si el
+  proxy inverso corre en la misma máquina no hay nada que hacer. Si está en otro
+  host o en otro contenedor, hace falta además
+  `OHMYDIAGRAMS_BRIDGE_HOST=0.0.0.0`, y entonces el puerto no puede quedar
+  abierto al mundo, porque el WebSocket del puente (`/bridge`) no pide token.
 
 ## Herramientas
 
