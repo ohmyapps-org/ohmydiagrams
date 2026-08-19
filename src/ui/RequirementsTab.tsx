@@ -1,6 +1,7 @@
-import { AlertTriangle, Check, CircleDashed, FileUp, Plus, X } from 'lucide-react'
+import { AlertTriangle, Check, CircleDashed, FileText, FileUp, Plus, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { useDocument } from '../store/document'
+import { useLibrary } from '../store/library'
 import { useLlm } from '../store/llm'
 import { useRequirements } from '../store/requirements'
 import type { RequirementCandidate } from '../requirements/types'
@@ -8,6 +9,35 @@ import { nodeKindOf } from '../types/uml'
 import { nextUseCaseSlot } from '../uml/placement'
 import { normalizeName } from '../uml/verbs'
 import ProgressBar from './ProgressBar'
+
+/** Specs already in the library, so a second diagram can reuse the reading. */
+function SavedSpecs() {
+  const specs = useLibrary((state) => state.specs)
+  const importSaved = useRequirements((state) => state.importSaved)
+  const status = useRequirements((state) => state.status)
+
+  if (specs.length === 0) return null
+
+  return (
+    <div className="w-full">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
+        Guardados
+      </p>
+      {specs.slice(0, 4).map((spec) => (
+        <button
+          key={spec.id}
+          type="button"
+          disabled={status === 'reading'}
+          onClick={() => void importSaved(spec.id)}
+          className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12px] text-ink transition hover:bg-accent-soft disabled:opacity-40"
+        >
+          <FileText size={13} className="shrink-0 text-faint" />
+          <span className="truncate">{spec.name}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function EmptyState() {
   const status = useRequirements((state) => state.status)
@@ -21,6 +51,7 @@ function EmptyState() {
         Importá la especificación de requisitos y te propongo los casos de uso
         que deberían estar en el diagrama.
       </p>
+      <SavedSpecs />
       <button
         type="button"
         onClick={() => void importFromPicker()}

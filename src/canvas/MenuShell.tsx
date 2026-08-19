@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -10,6 +10,12 @@ interface Props {
   width: string
   onClose: () => void
   children: ReactNode
+  /**
+   * A toggle button that opens this menu, if any. Clicks on it are not
+   * treated as "outside": otherwise the button's own click handler would
+   * reopen the menu right after this dismiss logic closes it.
+   */
+  anchorRef?: RefObject<HTMLElement | null>
 }
 
 /**
@@ -18,7 +24,7 @@ interface Props {
  * Portalled to `<body>`: the canvas panel uses `backdrop-filter`, which makes
  * it the containing block for fixed children and clips them to its bounds.
  */
-export default function MenuShell({ x, y, width, onClose, children }: Props) {
+export default function MenuShell({ x, y, width, onClose, children, anchorRef }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: x, top: y })
 
@@ -41,7 +47,10 @@ export default function MenuShell({ x, y, width, onClose, children }: Props) {
 
   useEffect(() => {
     const dismiss = (event: MouseEvent): void => {
-      if (!ref.current?.contains(event.target as Node)) onClose()
+      const target = event.target as Node
+      if (ref.current?.contains(target)) return
+      if (anchorRef?.current?.contains(target)) return
+      onClose()
     }
     const escape = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') onClose()
@@ -52,7 +61,7 @@ export default function MenuShell({ x, y, width, onClose, children }: Props) {
       window.removeEventListener('mousedown', dismiss)
       window.removeEventListener('keydown', escape)
     }
-  }, [onClose])
+  }, [onClose, anchorRef])
 
   return createPortal(
     <div

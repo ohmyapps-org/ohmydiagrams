@@ -1,3 +1,4 @@
+import { isDiagramKind } from '../types/document'
 import {
   EDGE_SPECS,
   NODE_SPECS,
@@ -24,7 +25,11 @@ export function parseDocument(raw: string): UmlDocument {
   } catch {
     throw new Error('El archivo no es JSON válido.')
   }
+  return coerceDocument(parsed)
+}
 
+/** Same validation, for a value that was already parsed (the local library). */
+export function coerceDocument(parsed: unknown): UmlDocument {
   if (typeof parsed !== 'object' || parsed === null) {
     throw new Error('El archivo no contiene un diagrama.')
   }
@@ -55,6 +60,8 @@ export function parseDocument(raw: string): UmlDocument {
 
   return {
     version: 1,
+    // Files written before kinds existed are use case diagrams.
+    kind: isDiagramKind(candidate.kind) ? candidate.kind : 'useCase',
     meta: {
       title: typeof candidate.meta?.title === 'string' ? candidate.meta.title : '',
       description:

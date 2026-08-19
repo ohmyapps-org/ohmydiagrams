@@ -1,4 +1,5 @@
 import { useDocument } from '../store/document'
+import { useLibrary } from '../store/library'
 import { toast } from '../store/toasts'
 import { downloadBlob, pickTextFile, slugify } from './download'
 import { parseDocument, serializeDocument } from './json'
@@ -50,7 +51,9 @@ export async function importJson(): Promise<void> {
   const raw = await pickTextFile('application/json,.json')
   if (raw === null) return
   try {
-    useDocument.getState().loadDocument(parseDocument(raw))
+    // An imported file becomes a document of its own, not an overwrite of the
+    // one already open.
+    useLibrary.getState().importDocument(parseDocument(raw))
     toast.success('Diagrama cargado.')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'No se pudo abrir el archivo.')

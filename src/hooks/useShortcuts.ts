@@ -2,6 +2,7 @@ import { useReactFlow } from '@xyflow/react'
 import { useEffect } from 'react'
 import { exportJson, exportPng, exportSvg, importJson } from '../export'
 import { useDocument } from '../store/document'
+import { useView } from '../store/view'
 
 /** True when the user is typing, so shortcuts must stay out of the way. */
 function isTyping(target: EventTarget | null): boolean {
@@ -116,6 +117,10 @@ export function useShortcuts(): void {
         case 'g':
           event.preventDefault()
           store.setUi({ snapToGrid: !store.ui.snapToGrid })
+          return
+        case 'z':
+          event.preventDefault()
+          useView.getState().toggleZen()
           return
         default:
       }

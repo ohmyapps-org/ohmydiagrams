@@ -11,6 +11,7 @@ import {
   type OnConnect,
 } from '@xyflow/react'
 import { useCallback, useRef, useState } from 'react'
+import { diagramType } from '../diagrams/registry'
 import { useDocument } from '../store/document'
 import { useTheme } from '../store/theme'
 import { toast } from '../store/toasts'
@@ -55,6 +56,7 @@ export default function Canvas({ onOpenGuide }: Props) {
   /** Where the right button went down, to tell a click from a pan. */
   const rightPress = useRef<Point | null>(null)
 
+  const kind = useDocument((state) => state.kind)
   const nodes = useDocument((state) => state.nodes)
   const edges = useDocument((state) => state.edges)
   const snapToGrid = useDocument((state) => state.ui.snapToGrid)
@@ -234,6 +236,11 @@ export default function Canvas({ onOpenGuide }: Props) {
     [addNode],
   )
 
+  // The first shapes of this kind's palette, as one-click entries.
+  const quickShapes = diagramType(kind)
+    .palette.flatMap((group) => group.shapes ?? [])
+    .slice(0, 5)
+
   const quickSkeleton = useCallback(() => {
     insertFragment(createUseCaseSkeleton(quickMenuPoint.current))
     setQuickMenu(null)
@@ -326,8 +333,9 @@ export default function Canvas({ onOpenGuide }: Props) {
         <QuickMenu
           target={quickMenu}
           canPaste={canPaste}
+          shapes={quickShapes}
           onClose={closeMenu}
-          onSkeleton={quickSkeleton}
+          onSkeleton={kind === 'useCase' ? quickSkeleton : undefined}
           onCreate={quickCreate}
           onPaste={() => {
             store().paste()

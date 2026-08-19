@@ -1,4 +1,5 @@
 import type { Edge, Node } from '@xyflow/react'
+import type { DiagramKind } from './document'
 
 /** Every shape the palette can drop onto the canvas. */
 export type UmlNodeKind =
@@ -58,6 +59,8 @@ export interface DocumentMeta {
 /** Shape of a saved `.json` file and of the localStorage payload. */
 export interface UmlDocument {
   version: 1
+  /** Files written before kinds existed carry none; they load as use cases. */
+  kind: DiagramKind
   meta: DocumentMeta
   nodes: UmlNode[]
   edges: UmlEdge[]

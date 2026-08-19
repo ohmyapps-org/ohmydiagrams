@@ -1,8 +1,9 @@
 import { AlertCircle, Check, CircleDashed, Wand2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useMemo } from 'react'
+import { diagramType } from '../diagrams/registry'
 import { useDocument } from '../store/document'
-import { GUIDE_STEPS } from '../uml/guide'
-import { validate, type ValidationFix, type ValidationItem } from '../uml/validation'
+import type { ValidationFix, ValidationItem } from '../uml/validation'
 import ProgressBar from './ProgressBar'
 import RequirementsTab from './RequirementsTab'
 
@@ -58,6 +59,7 @@ function ValidationRow({ item }: { item: ValidationItem }) {
   )
 
   const failed = item.status === 'fail'
+  const idle = item.status === 'idle'
   const clickable = failed && item.elementIds.length > 0
 
   const focus = (): void => {
@@ -86,6 +88,8 @@ function ValidationRow({ item }: { item: ValidationItem }) {
         <span className="mt-0.5 shrink-0">
           {failed ? (
             <AlertCircle size={15} className="text-danger" />
+          ) : idle ? (
+            <CircleDashed size={15} className="text-faint" />
           ) : (
             <Check size={15} className="text-ok" />
           )}
@@ -93,7 +97,7 @@ function ValidationRow({ item }: { item: ValidationItem }) {
         <div className="min-w-0 flex-1">
           <p
             className={`text-[12.5px] leading-snug ${
-              failed ? 'font-medium text-ink' : 'text-muted'
+              failed ? 'font-medium text-ink' : idle ? 'text-faint' : 'text-muted'
             }`}
           >
             <span className="mr-1 text-faint">{item.number}.</span>
@@ -124,17 +128,45 @@ function ValidationRow({ item }: { item: ValidationItem }) {
   )
 }
 
+function Empty({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-5 py-8 text-center text-[12.5px] leading-relaxed text-muted">
+      {children}
+    </p>
+  )
+}
+
 function ValidationTab() {
+  const kind = useDocument((state) => state.kind)
   const nodes = useDocument((state) => state.nodes)
   const edges = useDocument((state) => state.edges)
   const meta = useDocument((state) => state.meta)
 
   // Re-derived on every graph change: the canvas state alone decides the result.
-  const report = useMemo(() => validate(nodes, edges, meta), [nodes, edges, meta])
+  const report = useMemo(
+    () => diagramType(kind).validate(nodes, edges, meta),
+    [kind, nodes, edges, meta],
+  )
+
+  if (report.total === 0) {
+    return (
+      <Empty>
+        {diagramType(kind).title} todavía no tiene reglas propias. Dibujá libre:
+        se guarda, se exporta y se abre igual que cualquier otro diagrama.
+      </Empty>
+    )
+  }
 
   return (
     <>
-      <ProgressBar passed={report.passed} total={report.total} />
+      {report.blank ? (
+        <p className="px-3.5 pb-3 text-[12px] leading-relaxed text-muted">
+          {report.total} reglas de UML 2.5 esperando. La validación arranca con
+          el primer elemento del lienzo.
+        </p>
+      ) : (
+        <ProgressBar passed={report.passed} total={report.total} />
+      )}
       <ul className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
         {report.items.map((item) => (
           <ValidationRow key={item.id} item={item} />
@@ -145,20 +177,22 @@ function ValidationTab() {
 }
 
 function GuideTab() {
+  const kind = useDocument((state) => state.kind)
   const guideChecks = useDocument((state) => state.ui.guideChecks)
   const toggleGuideStep = useDocument((state) => state.toggleGuideStep)
-  const done = GUIDE_STEPS.filter((step) => guideChecks[step.id]).length
+  const steps = diagramType(kind).guide
+  const done = steps.filter((step) => guideChecks[step.id]).length
 
   return (
     <>
       <ProgressBar
         passed={done}
-        total={GUIDE_STEPS.length}
+        total={steps.length}
         unit="pasos"
         doneLabel="Guía completa"
       />
       <ol className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
-        {GUIDE_STEPS.map((step, index) => {
+        {steps.map((step, index) => {
           const checked = guideChecks[step.id] ?? false
           return (
             <li key={step.id}>
@@ -200,11 +234,18 @@ function GuideTab() {
 }
 
 export default function ChecklistPanel({ tab, onTabChange }: Props) {
+  const type = diagramType(useDocument((state) => state.kind))
+
+  // A kind without a guide, or one the requirements reader knows nothing
+  // about, does not show those tabs at all.
   const tabs: { id: ChecklistTab; label: string }[] = [
     { id: 'validation', label: 'Validación' },
-    { id: 'guide', label: 'Guía' },
-    { id: 'requirements', label: 'Requisitos' },
+    ...(type.guide.length > 0 ? [{ id: 'guide' as const, label: 'Guía' }] : []),
+    ...(type.requirements
+      ? [{ id: 'requirements' as const, label: 'Requisitos' }]
+      : []),
   ]
+  const active = tabs.some((entry) => entry.id === tab) ? tab : 'validation'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -215,7 +256,7 @@ export default function ChecklistPanel({ tab, onTabChange }: Props) {
             type="button"
             onClick={() => onTabChange(entry.id)}
             className={`flex-1 rounded-control px-3 py-1.5 text-[12.5px] font-medium transition ${
-              tab === entry.id
+              active === entry.id
                 ? 'bg-accent-soft text-accent'
                 : 'text-muted hover:text-ink'
             }`}
@@ -224,10 +265,10 @@ export default function ChecklistPanel({ tab, onTabChange }: Props) {
           </button>
         ))}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col pt-3">
-        {tab === 'validation' && <ValidationTab />}
-        {tab === 'guide' && <GuideTab />}
-        {tab === 'requirements' && <RequirementsTab />}
+      <div className="requirements-table flex min-h-0 flex-1 flex-col pt-3">
+        {active === 'validation' && <ValidationTab />}
+        {active === 'guide' && <GuideTab />}
+        {active === 'requirements' && <RequirementsTab />}
       </div>
     </div>
   )

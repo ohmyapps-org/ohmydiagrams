@@ -7,23 +7,23 @@ import type { StateStorage } from 'zustand/middleware'
  */
 export function createDebouncedStorage(delayMs: number): StateStorage {
   let timer: ReturnType<typeof setTimeout> | null = null
-  let queuedKey: string | null = null
-  let queuedValue: string | null = null
+  // Keyed, because one save touches both the document and the library index.
+  const queued = new Map<string, string>()
 
   const flush = (): void => {
     if (timer !== null) {
       clearTimeout(timer)
       timer = null
     }
-    if (queuedKey === null || queuedValue === null) return
-    try {
-      localStorage.setItem(queuedKey, queuedValue)
-    } catch {
-      // Quota exceeded or private mode: autosave is a convenience, not a
-      // guarantee. Manual JSON export remains available.
+    for (const [key, value] of queued) {
+      try {
+        localStorage.setItem(key, value)
+      } catch {
+        // Quota exceeded or private mode: autosave is a convenience, not a
+        // guarantee. Manual JSON export remains available.
+      }
     }
-    queuedKey = null
-    queuedValue = null
+    queued.clear()
   }
 
   if (typeof window !== 'undefined') {
@@ -35,22 +35,19 @@ export function createDebouncedStorage(delayMs: number): StateStorage {
   return {
     getItem: (name) => {
       try {
-        return localStorage.getItem(name)
+        // A queued write is the truth until it lands.
+        return queued.get(name) ?? localStorage.getItem(name)
       } catch {
         return null
       }
     },
     setItem: (name, value) => {
-      queuedKey = name
-      queuedValue = value
+      queued.set(name, value)
       if (timer !== null) clearTimeout(timer)
       timer = setTimeout(flush, delayMs)
     },
     removeItem: (name) => {
-      if (timer !== null) clearTimeout(timer)
-      timer = null
-      queuedKey = null
-      queuedValue = null
+      queued.delete(name)
       try {
         localStorage.removeItem(name)
       } catch {

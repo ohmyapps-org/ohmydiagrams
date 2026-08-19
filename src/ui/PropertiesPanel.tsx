@@ -86,15 +86,11 @@ function DocumentProperties() {
 
   return (
     <div className="p-3.5">
-      <h3 className="mb-2.5 text-[12.5px] font-semibold text-ink">Documento</h3>
-      <Field label="Título">
-        <input
-          value={meta.title}
-          onChange={(event) => setMeta({ title: event.target.value })}
-          placeholder="Sistema de Punto de Venta"
-          className={inputClass}
-        />
-      </Field>
+      <h3 className="text-[12.5px] font-semibold text-ink">Documento</h3>
+      {/* Read-only: the title has a single editor, in the top bar. */}
+      <p className="mb-2.5 mt-0.5 truncate text-[11.5px] text-faint" title={meta.title}>
+        {meta.title.trim() || 'Sin título'} · se renombra en la barra superior
+      </p>
       <Field label="Descripción">
         <textarea
           value={meta.description}

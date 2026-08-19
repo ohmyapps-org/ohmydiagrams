@@ -12,6 +12,18 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
 
 ## Características
 
+**Inicio y biblioteca**
+- Pantalla de inicio con tus diagramas guardados, cada uno con su tipo, su
+  tamaño y cuándo lo tocaste por última vez. Abrir, duplicar, borrar o cargar
+  un JSON, y arriba las tarjetas para empezar uno nuevo.
+- Tus especificaciones de requisitos también quedan guardadas ahí: se importan
+  una vez y se leen desde cualquier diagrama.
+- Cuatro tipos de diagrama registrados: **casos de uso** (con las 17 reglas y la
+  guía), y **flujo**, **QA** y **automatización**, que por ahora dibujan con las
+  formas genéricas y no tienen reglas propias. El tipo decide la paleta, la
+  checklist y la guía; el resto del editor no sabe de tipos
+  (`src/diagrams/registry.ts`).
+
 **Lienzo**
 - Lienzo infinito con paneo, zoom, grilla de puntos y ajuste a la grilla.
 - Paleta con búsqueda: Actor, Caso de uso, Límite del sistema, Nota, y formas
@@ -25,6 +37,8 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   para escribir.
 - Tema claro y oscuro, con un interruptor en la barra superior. Sin elección
   guardada sigue al sistema operativo.
+- Modo zen (tecla `Z`): se van la barra, la paleta y el panel derecho, y queda
+  el lienzo solo.
 
 **Relaciones UML**
 - Asociación, `«include»`, `«extend»`, generalización, conector de nota y flecha
@@ -39,6 +53,8 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   tipos en las generalizaciones, título del documento y elementos sueltos.
 - Cada ítem en rojo explica qué falta y sugiere una corrección concreta; algunos
   ofrecen un arreglo de un clic (renombrar, invertir dirección).
+- Con el lienzo en blanco no se valida nada: las 17 reglas se muestran en gris,
+  esperando. Un diagrama vacío no rompe ninguna regla.
 - Segunda pestaña con la guía del proceso de modelado paso a paso.
 
 **Requisitos**
@@ -52,7 +68,9 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   corre el modelo, sin cambiar nada de la interfaz de usuario.
 
 **Modelo (opcional)**
-- El botón de la chispa en la barra superior conecta cualquier servidor con API
+- El menú "Conexiones" de la barra superior tiene las dos conexiones salientes,
+  dichas con todas las letras: el modelo de IA y el agente MCP.
+- Conecta cualquier servidor con API
   compatible con OpenAI: URL base, nombre del modelo y clave opcional. Sirve
   igual para un contenedor propio en un VPS (Ollama, vLLM, LM Studio) que para
   OpenAI, Anthropic u OpenRouter.
@@ -73,11 +91,14 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   crear y conectar elementos, renombrar, borrar y consultar la checklist.
 - Las relaciones inválidas también se rechazan por esta vía, con la misma
   explicación de la regla que ve una persona.
-- La conexión es opt-in desde el botón del enchufe en la barra superior y el
+- La conexión es opt-in desde el menú "Conexiones" de la barra superior y el
   socket escucha sólo en loopback. Ver [`mcp/README.md`](mcp/README.md).
 
 **Persistencia y exportación**
-- Autoguardado en `localStorage` con escritura diferida.
+- Autoguardado en `localStorage` con escritura diferida: un índice con la
+  biblioteca (`ohmydiagrams:library:v1`) y un archivo por diagrama
+  (`ohmydiagrams:doc:<id>`). El documento único de las versiones anteriores se
+  migra solo al abrir la app.
 - Exportación a SVG vectorial real, PNG a 2x y JSON del documento (con carga).
 - El título y la descripción del diagrama se incluyen en las exportaciones.
 
@@ -110,11 +131,14 @@ bun run mcp
 
 ```
 src/
-  types/uml.ts    Modelo de dominio: tipos de nodo y relación, y sus defaults
-  store/          Zustand: documento, historial de undo/redo, autoguardado, toasts
+  types/          Modelo de dominio: nodos y relaciones (uml.ts), identidad del
+                  documento y de la biblioteca (document.ts)
+  diagrams/       Registro de tipos de diagrama: paleta, reglas y guía de cada uno
+  store/          Zustand: documento abierto, biblioteca, historial de undo/redo,
+                  autoguardado, tema, vista y toasts
   uml/            Lógica pura: geometría, análisis del grafo, reglas y validación
   canvas/         Componentes de React Flow: nodos, relaciones, edición en línea
-  ui/             Paneles: barra superior, paleta, propiedades, checklist
+  ui/             Inicio y paneles: barra superior, paleta, propiedades, checklist
   export/         Renderizador SVG, rasterizador PNG y serialización JSON
   requirements/   Lectura de PDF/Markdown/TXT y extracción de casos de uso
   llm/            Cliente de chat compatible con OpenAI y forma de la conexión
@@ -122,7 +146,7 @@ src/
 mcp/              Servidor MCP (Bun + stdio) y host del WebSocket local
 ```
 
-Tres decisiones sostienen el resto:
+Cinco decisiones sostienen el resto:
 
 1. **Relaciones flotantes.** La geometría de cada línea se calcula contra la
    silueta de los nodos, no contra la posición de un handle. El lienzo y el
@@ -134,6 +158,14 @@ Tres decisiones sostienen el resto:
 3. **El exportador dibuja el modelo, no el DOM.** Produce SVG vectorial real
    (elipses, trazados, marcadores) en lugar de una captura envuelta en
    `foreignObject`, y el PNG se rasteriza desde ese mismo SVG.
+4. **El tipo de diagrama vive en un registro, no en `if`s.** `diagrams/registry.ts`
+   dice qué paleta, qué reglas y qué guía tiene cada tipo; la paleta, la
+   checklist, el lienzo y el puente MCP leen de ahí. Agregar un tipo nuevo es
+   agregar una entrada, no tocar los componentes.
+5. **La biblioteca es la dueña del guardado.** El store del documento sólo
+   conoce el diagrama abierto; `store/library.ts` escucha sus cambios y los
+   escribe en el archivo del documento activo. Por eso abrir uno reinicia el
+   historial: el undo nunca cruza de un diagrama a otro.
 
 ## Estado del proyecto
 

@@ -1,4 +1,5 @@
-import { parseDocument } from '../export/json'
+import { diagramType } from '../diagrams/registry'
+import { coerceDocument } from '../export/json'
 import { useDocument } from '../store/document'
 import {
   NODE_SPECS,
@@ -10,7 +11,6 @@ import {
 import { rightOfEverything } from '../uml/placement'
 import { canConnect, orientConnection } from '../uml/rules'
 import { createUseCaseSkeleton } from '../uml/templates'
-import { validate } from '../uml/validation'
 import type {
   BridgeMethod,
   BridgeParams,
@@ -57,8 +57,8 @@ function summarise(): DiagramSummary {
 }
 
 function report(): ValidationSummary {
-  const { nodes, edges, meta } = useDocument.getState()
-  const result = validate(nodes, edges, meta)
+  const { kind, nodes, edges, meta } = useDocument.getState()
+  const result = diagramType(kind).validate(nodes, edges, meta)
   return {
     passed: result.passed,
     total: result.total,
@@ -143,7 +143,7 @@ const HANDLERS: HandlerMap = {
 
   loadDocument: ({ document }) => {
     // Reuse the importer's validation: an agent is as untrusted as a file.
-    useDocument.getState().loadDocument(parseDocument(JSON.stringify(document)))
+    useDocument.getState().loadDocument(coerceDocument(document))
     return {}
   },
 

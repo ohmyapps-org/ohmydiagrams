@@ -4,6 +4,7 @@ import { heuristicExtractor } from '../requirements/heuristic'
 import { createLlmExtractor } from '../requirements/llm'
 import { REQUIREMENTS_ACCEPT, readRequirementsFile } from '../requirements/read'
 import type { RequirementCandidate, RequirementExtractor } from '../requirements/types'
+import { useLibrary } from './library'
 import { useLlm } from './llm'
 import { toast } from './toasts'
 
@@ -35,6 +36,8 @@ interface RequirementsState {
   candidates: RequirementCandidate[]
   importFile: (file: File) => Promise<void>
   importFromPicker: () => Promise<void>
+  /** Reads one of the specs already saved in the library. */
+  importSaved: (specId: string) => Promise<void>
   dismiss: (id: string) => void
   clear: () => void
 }
@@ -70,35 +73,25 @@ export const useRequirements = create<RequirementsState>((set) => ({
       return
     }
 
-    const extractor = activeExtractor()
-    let label = extractor.label
-    let candidates: RequirementCandidate[]
-    try {
-      candidates = await extractor.extract(text)
-    } catch (error) {
-      if (extractor === heuristicExtractor) {
-        set(idle())
-        toast.error(messageOf(error, 'No se pudo leer el archivo.'))
-        return
-      }
-      // The model failed, but the document is already parsed: say why and fall
-      // back to the local reader rather than throwing the import away.
-      toast.error(`${messageOf(error, 'Falló el modelo.')} Se leyó localmente.`)
-      candidates = await heuristicExtractor.extract(text)
-      label = heuristicExtractor.label
-    }
-
-    set({ status: 'ready', extractorLabel: label, candidates })
-    if (candidates.length === 0) {
-      toast.info('No se encontró ningún requisito con forma de caso de uso.')
-    } else {
-      toast.success(`${candidates.length} casos de uso propuestos.`)
-    }
+    // The file joins the library, so it can be read again from any diagram.
+    useLibrary.getState().addSpec(file.name, text)
+    await read(set, text)
   },
 
   importFromPicker: async () => {
     const file = await pickFile(REQUIREMENTS_ACCEPT)
     if (file) await useRequirements.getState().importFile(file)
+  },
+
+  importSaved: async (specId) => {
+    const spec = useLibrary.getState().specs.find((item) => item.id === specId)
+    if (!spec) return
+    if (!spec.text) {
+      toast.error('El texto de ese archivo no se guardó: importalo de nuevo.')
+      return
+    }
+    set({ status: 'reading', sourceName: spec.name })
+    await read(set, spec.text)
   },
 
   dismiss: (id) =>
@@ -108,3 +101,34 @@ export const useRequirements = create<RequirementsState>((set) => ({
 
   clear: () => set(idle()),
 }))
+
+/** Runs the active reader over already-extracted text and publishes the result. */
+async function read(
+  set: (partial: Partial<RequirementsState>) => void,
+  text: string,
+): Promise<void> {
+  const extractor = activeExtractor()
+  let label = extractor.label
+  let candidates: RequirementCandidate[]
+  try {
+    candidates = await extractor.extract(text)
+  } catch (error) {
+    if (extractor === heuristicExtractor) {
+      set(idle())
+      toast.error(messageOf(error, 'No se pudo leer el archivo.'))
+      return
+    }
+    // The model failed, but the document is already parsed: say why and fall
+    // back to the local reader rather than throwing the import away.
+    toast.error(`${messageOf(error, 'Falló el modelo.')} Se leyó localmente.`)
+    candidates = await heuristicExtractor.extract(text)
+    label = heuristicExtractor.label
+  }
+
+  set({ status: 'ready', extractorLabel: label, candidates })
+  if (candidates.length === 0) {
+    toast.info('No se encontró ningún requisito con forma de caso de uso.')
+  } else {
+    toast.success(`${candidates.length} casos de uso propuestos.`)
+  }
+}

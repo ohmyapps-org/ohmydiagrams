@@ -1,13 +1,5 @@
-import {
-  Circle,
-  ClipboardPaste,
-  Frame,
-  LayoutTemplate,
-  StickyNote,
-  Type,
-  User,
-} from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ClipboardPaste, LayoutTemplate } from 'lucide-react'
+import type { PaletteShape } from '../diagrams/types'
 import { NODE_SPECS, type UmlNodeKind } from '../types/uml'
 import MenuShell, { MenuItem, MenuSeparator } from './MenuShell'
 
@@ -17,19 +9,14 @@ export interface QuickMenuTarget {
   y: number
 }
 
-const SHORTCUTS: readonly { kind: UmlNodeKind; icon: ReactNode }[] = [
-  { kind: 'actor', icon: <User size={14} /> },
-  { kind: 'useCase', icon: <Circle size={14} /> },
-  { kind: 'boundary', icon: <Frame size={14} /> },
-  { kind: 'note', icon: <StickyNote size={14} /> },
-  { kind: 'text', icon: <Type size={14} /> },
-]
-
 interface Props {
   target: QuickMenuTarget
   canPaste: boolean
+  /** Shapes of the open diagram's kind, in palette order. */
+  shapes: readonly PaletteShape[]
   onClose: () => void
-  onSkeleton: () => void
+  /** Absent for kinds that have no ready-made example to drop. */
+  onSkeleton?: () => void
   onCreate: (kind: UmlNodeKind) => void
   onPaste: () => void
 }
@@ -41,6 +28,7 @@ interface Props {
 export default function QuickMenu({
   target,
   canPaste,
+  shapes,
   onClose,
   onSkeleton,
   onCreate,
@@ -48,16 +36,20 @@ export default function QuickMenu({
 }: Props) {
   return (
     <MenuShell x={target.x} y={target.y} width="w-56" onClose={onClose}>
-      <MenuItem
-        icon={<LayoutTemplate size={14} />}
-        label="Diagrama de ejemplo"
-        onClick={onSkeleton}
-      />
-      <MenuSeparator />
-      {SHORTCUTS.map((entry) => (
+      {onSkeleton && (
+        <>
+          <MenuItem
+            icon={<LayoutTemplate size={14} />}
+            label="Diagrama de ejemplo"
+            onClick={onSkeleton}
+          />
+          <MenuSeparator />
+        </>
+      )}
+      {shapes.map((entry) => (
         <MenuItem
           key={entry.kind}
-          icon={entry.icon}
+          icon={<entry.icon size={14} />}
           label={NODE_SPECS[entry.kind].title}
           onClick={() => onCreate(entry.kind)}
         />

@@ -16,7 +16,8 @@ import {
 } from './graph'
 import { isInfinitivePhrase, normalizeName, suggestInfinitivePhrase } from './verbs'
 
-export type ValidationStatus = 'pass' | 'fail'
+/** `idle` is a rule that was not evaluated because the canvas is empty. */
+export type ValidationStatus = 'pass' | 'fail' | 'idle'
 
 /** A one-click repair the checklist can offer for a failing rule. */
 export type ValidationFix =
@@ -610,6 +611,23 @@ export interface ValidationReport {
   items: ValidationItem[]
   passed: number
   total: number
+  /** Nothing was drawn yet: every item is `idle` and nothing failed. */
+  blank: boolean
+}
+
+/**
+ * The same rule, unevaluated. An empty canvas breaks no rule: reporting 17
+ * failures before the first shape is drawn is noise, not feedback.
+ */
+function waiting(item: ValidationItem): ValidationItem {
+  return {
+    ...item,
+    status: 'idle',
+    message: '',
+    suggestion: '',
+    elementIds: [],
+    fixes: [],
+  }
 }
 
 /** Pure evaluation of the whole checklist against the current document. */
@@ -628,10 +646,16 @@ export function validate(
     boundaries: index.nodesOfKind('boundary'),
   }
   const items = RULES.map((rule) => rule(ctx)).sort((a, b) => a.number - b.number)
+  // The rules still run on a blank document, only to keep their numbering and
+  // titles in one place; their verdicts are dropped.
+  if (nodes.length === 0 && edges.length === 0) {
+    return { items: items.map(waiting), passed: 0, total: items.length, blank: true }
+  }
   return {
     items,
     passed: items.filter((item) => item.status === 'pass').length,
     total: items.length,
+    blank: false,
   }
 }
 

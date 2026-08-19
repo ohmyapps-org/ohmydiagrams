@@ -1,6 +1,6 @@
 # Estado del proyecto y cómo continuar
 
-Última actualización: 2026-08-18. Documento de traspaso para retomar el trabajo
+Última actualización: 2026-08-19. Documento de traspaso para retomar el trabajo
 en otra máquina.
 
 ## Cómo arrancar en un equipo nuevo
@@ -18,9 +18,35 @@ Verificación:
 bun run typecheck && bunx oxlint . && bun test && bun run build
 ```
 
-Los cuatro pasan limpio. No hay backend ni cuentas: el documento vive en
+Los cuatro pasan limpio. No hay backend ni cuentas: los documentos viven en
 `localStorage` del navegador. El único proceso extra es el servidor MCP
 (`bun run mcp`), que tampoco guarda estado.
+
+## Lo último que se hizo (sesión 2026-08-19)
+
+**Arreglos**
+
+- **Con el lienzo en blanco no se valida nada.** `validate()` devuelve
+  `blank: true` y las 17 reglas en estado `idle` (gris, sin mensaje) cuando no
+  hay ni un nodo ni una relación. Antes un documento vacío mostraba 12 errores.
+- **El título se edita en un solo lugar**, la barra superior. El panel derecho
+  ahora lo muestra de sólo lectura y sigue editando la descripción.
+- **Un solo menú "Conexiones"** en lugar de dos botones con enchufes parecidos:
+  una fila para el modelo de IA (BYOK por URL) y otra para el agente MCP, cada
+  una con su estado y su explicación (`ui/ConnectionsMenu.tsx`).
+
+**Nuevo**
+
+- **Biblioteca de documentos** (`store/library.ts`): varios diagramas, cada uno
+  en su archivo de `localStorage`, con un índice aparte para la pantalla de
+  inicio. Migra sola el documento único de las versiones anteriores.
+- **Vista de inicio** (`ui/Home.tsx`): tus diagramas (abrir, duplicar, borrar,
+  cargar JSON), las tarjetas para empezar uno nuevo y tus especificaciones de
+  requisitos guardadas.
+- **Tipos de diagrama** (`diagrams/registry.ts`): casos de uso, flujo, QA y
+  automatización. Los tres últimos dibujan con formas genéricas y todavía no
+  tienen reglas ni guía; la interfaz se adapta sola porque lee del registro.
+- **Modo zen** (tecla `Z` o el botón de la barra): sólo el lienzo.
 
 ## Qué está hecho
 
@@ -44,14 +70,14 @@ Todo el alcance P0, más cinco funciones nuevas:
 
 Esta distinción es lo más importante de este documento.
 
-**Verificado en el navegador (sesión anterior):**
+**Verificado en el navegador (sesiones anteriores):**
 
 - Lienzo, paleta, arrastre, edición de nodos, redimensionado, propiedades.
 - Checklist en vivo, incluido llegar a 17/17 "Diagrama válido".
 - El ciclo de conexión completo y la exportación SVG con geometría vectorial
   real.
 
-**Verificado en el navegador (esta sesión):**
+**Verificado en el navegador (2026-08-18):**
 
 - **Toasts.** Era lo único sin evidencia y ya la tiene: el aviso se renderiza
   centrado abajo (214x40, `z-index` 60, opacidad 1), se autodescarta a los
@@ -78,6 +104,31 @@ Esta distinción es lo más importante de este documento.
 - Paleta: clic crea la forma en el centro de lo visible y los clics repetidos
   cascadean de a 20 px sin apilarse.
 
+**Verificado en el navegador (2026-08-19):**
+
+- Checklist en blanco: las 17 reglas en gris sin un solo error, el contador
+  desaparece, y vuelve a 12/17 apenas se agrega el primer actor. Deshacer lo
+  deja otra vez en gris.
+- Menú "Conexiones": las dos filas con su estado, el agente MCP pasando a
+  "Buscando…" y volviendo a "Sin conectar", el punto verde en el botón, y el
+  diálogo del modelo abriéndose desde la fila de arriba.
+- Migración del documento único: se sembró la clave vieja
+  `ohmydiagrams:document:v1`, y al recargar quedó una entrada en la biblioteca
+  con su archivo propio, abierta, con el `ui` (incluido `guideChecks`) intacto.
+- Inicio: tarjetas de los cuatro tipos, lista de diagramas con tipo, tamaño y
+  "editado recién", duplicar y borrar (el archivo del duplicado borrado
+  desaparece de `localStorage`).
+- Un diagrama de flujo creado desde el inicio: insignia FLUJO, paleta genérica,
+  conector por defecto "Flecha", sólo la pestaña Validación y el mensaje de
+  "todavía no tiene reglas propias".
+- Autoguardado con varios documentos: el título y el contador de elementos del
+  diagrama abierto llegan al índice, y abrir el otro documento no arrastra ni
+  nodos ni historial (deshacer queda deshabilitado).
+- Modo zen con la tecla `Z`: se van barra, paleta y panel; el botón "Salir del
+  zen" y la preferencia guardada en `localStorage`.
+- Requisitos guardados: la lista "Guardados" en la pestaña y el botón que vuelve
+  a leer el texto de una especificación ya importada (2 casos de uso propuestos).
+
 **NO verificado todavía:**
 
 - La descarga real del PNG y la carga de un JSON desde el disco (implican el
@@ -86,6 +137,10 @@ Esta distinción es lo más importante de este documento.
   ejercitaron).
 - Lectura de un PDF real. El camino de Markdown y texto sí se ejercitó; el de
   PDF sólo compila y quedó separado en su propio chunk.
+- La importación de una especificación **desde el disco** (el diálogo del
+  sistema operativo). Lo que sí se ejercitó es el otro extremo: una
+  especificación ya guardada en la biblioteca se vuelve a leer y propone sus
+  casos de uso.
 - Las reglas 6, 9, 10, 11, 12, 13, 14, 15 y 17 no se vieron pasar de verde a
   rojo en vivo. La lógica es pura y está en `uml/validation.ts`.
 
@@ -139,7 +194,24 @@ Dos consecuencias prácticas:
    autoguardado. El botón del enchufe es opt-in a propósito: nada se conecta
    solo, y así tampoco se llena la consola de reintentos.
 
-6. **La extracción de requisitos está detrás de una interfaz**
+6. **El tipo de diagrama vive en un registro** (`diagrams/registry.ts`), no en
+   condicionales repartidos. Cada tipo declara paleta, reglas, guía, conector
+   por defecto y si el lector de requisitos le sirve; la paleta, la checklist,
+   el lienzo y el puente MCP leen de ahí. Los tipos "flujo", "QA" y
+   "automatización" existen como entradas con formas genéricas y `validate` que
+   no devuelve reglas: la interfaz ya sabe mostrar "todavía no tiene reglas
+   propias" sin ramas nuevas.
+
+7. **La biblioteca es la dueña de la persistencia.** El store del documento
+   (`store/document.ts`) perdió el middleware `persist` y sólo conoce el
+   diagrama abierto; `store/library.ts` se suscribe a sus cambios y escribe en
+   el archivo del `activeId`. Dos consecuencias que conviene no romper: al
+   abrir un documento el `activeId` se fija **antes** de `loadDocument` (si no,
+   el autoguardado escribe el diagrama nuevo en el archivo del anterior), y
+   `loadDocument` limpia el historial, porque el undo no debe cruzar de un
+   diagrama a otro.
+
+8. **La extracción de requisitos está detrás de una interfaz**
    (`requirements/types.ts`). La implementación que se envía es local y
    determinista; `setRequirementExtractor` permite cambiarla por una con modelo
    sin tocar la interfaz. La versión local **no traduce ni inventa**: si la
@@ -175,6 +247,19 @@ Dos consecuencias prácticas:
 
 ## Pendiente
 
+**Siguiente en la lista (backlog del 2026-08-19)**
+
+- **Compartir por link**, **guardado en la nube con cuenta de GitHub/Google** y
+  **colaboración en vivo hasta 4 personas**. Los tres necesitan backend y una
+  decisión de hosting. El paso previo ya está hecho: cada documento tiene id
+  propio y la biblioteca es el único lugar que escribe. Lo que falta del lado
+  del cliente es que `store/library.ts` pueda tener otro respaldo además de
+  `localStorage`.
+- **Onboarding** (explícitamente fuera del alcance de esta tanda).
+- Notación propia para flujo, QA y automatización: hoy son entradas del registro
+  con formas genéricas. Cada una necesita sus tipos de nodo, sus reglas y su
+  guía; el resto de la aplicación no se toca.
+
 **P1 sin empezar**
 
 - Modo foco: al hacer clic en un ítem rojo, mover la cámara hacia los elementos
@@ -183,10 +268,13 @@ Dos consecuencias prácticas:
 
 **Ideas sueltas**
 
-- Tests: hay 6, todos sobre `requirements/heuristic.ts`. Los siguientes
-  candidatos son `uml/validation.ts` y `export/svg.ts`, puros los dos, y
-  `uml/placement.ts`, que ya tuvo un bug real de coordenadas sin ajustar.
-- El bundle principal quedó en 506 kB (163 kB con gzip). React Flow sigue siendo
+- Tests: hay 20, sobre `requirements/`, `llm/client.ts`, `uml/validation.ts`
+  (lienzo en blanco) y `export/json.ts` (el tipo de diagrama en el ida y
+  vuelta). Los siguientes candidatos son el resto de `uml/validation.ts`,
+  `export/svg.ts` y `uml/placement.ts`, que ya tuvo un bug real de coordenadas
+  sin ajustar. `store/library.ts` necesita `localStorage`, así que hoy sólo se
+  verifica en el navegador.
+- El bundle principal quedó en 545 kB (175 kB con gzip). React Flow sigue siendo
   la mayor parte; pdf.js ya está en su propio chunk perezoso de 427 kB.
 - El menú rápido no usa `onPaneContextMenu`: React Flow ignora ese callback
   cuando `panOnDrag` incluye el botón derecho, así que el evento se escucha en
