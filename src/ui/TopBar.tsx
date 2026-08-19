@@ -9,31 +9,30 @@ import {
   AlignStartVertical,
   AlignVerticalSpaceAround,
   ChevronDown,
+  ChevronLeft,
   Download,
   FilePlus2,
   FolderOpen,
   Grid3x3,
   Maximize,
-  Moon,
-  Plug,
-  PlugZap,
+  Maximize2,
   Redo2,
   Save,
-  Sparkles,
-  Sun,
   Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useEffect, useRef, useState } from 'react'
-import { useBridge } from '../bridge/client'
+import { useRef, useState } from 'react'
+import MenuShell from '../canvas/MenuShell'
+import { diagramType } from '../diagrams/registry'
 import { exportJson, exportPng, exportSvg, importJson } from '../export'
 import { useDocument } from '../store/document'
-import { useLlm } from '../store/llm'
-import { useTheme } from '../store/theme'
+import { useLibrary } from '../store/library'
+import { useView } from '../store/view'
 import type { AlignAxis } from '../uml/geometry'
-import LlmSettings from './LlmSettings'
+import ConnectionsMenu from './ConnectionsMenu'
+import ThemeButton from './ThemeButton'
 
 function ToolButton({
   icon,
@@ -78,18 +77,12 @@ const ALIGN_BUTTONS: readonly { axis: AlignAxis; label: string; icon: ReactNode 
   { axis: 'bottom', label: 'Alinear abajo', icon: <AlignEndHorizontal size={16} /> },
 ]
 
+/** Matches the `w-52` the menu renders at, for right-edge alignment. */
+const EXPORT_MENU_WIDTH_PX = 13 * 16
+
 function ExportMenu() {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const dismiss = (event: MouseEvent): void => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false)
-    }
-    window.addEventListener('mousedown', dismiss)
-    return () => window.removeEventListener('mousedown', dismiss)
-  }, [open])
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const items: { label: string; shortcut: string; run: () => void }[] = [
     { label: 'PNG (2x)', shortcut: '⌘E', run: () => void exportPng(2) },
@@ -97,9 +90,12 @@ function ExportMenu() {
     { label: 'JSON del diagrama', shortcut: '⌘S', run: exportJson },
   ]
 
+  const anchor = open ? buttonRef.current?.getBoundingClientRect() : null
+
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="flex h-8 items-center gap-1.5 rounded-control px-2.5 text-[13px] font-medium text-ink transition hover:bg-accent-soft"
@@ -108,8 +104,14 @@ function ExportMenu() {
         Exportar
         <ChevronDown size={13} className="text-faint" />
       </button>
-      {open && (
-        <div className="glass absolute right-0 top-9 z-50 w-52 rounded-panel p-1">
+      {anchor && (
+        <MenuShell
+          x={anchor.right - EXPORT_MENU_WIDTH_PX}
+          y={anchor.bottom + 4}
+          width="w-52"
+          onClose={() => setOpen(false)}
+          anchorRef={buttonRef}
+        >
           {items.map((item) => (
             <button
               key={item.label}
@@ -124,81 +126,8 @@ function ExportMenu() {
               <kbd className="text-[11px] text-faint">{item.shortcut}</kbd>
             </button>
           ))}
-        </div>
+        </MenuShell>
       )}
-    </div>
-  )
-}
-
-const BRIDGE_LABELS = {
-  off: 'Conectar el lienzo a un agente MCP',
-  connecting: 'Buscando el servidor MCP…',
-  connected: 'Agente MCP conectado. Clic para desconectar.',
-} as const
-
-function ThemeButton() {
-  const theme = useTheme((state) => state.theme)
-  const toggle = useTheme((state) => state.toggle)
-  const label = theme === 'dark' ? 'Pasar al tema claro' : 'Pasar al tema oscuro'
-
-  return (
-    <ToolButton
-      icon={theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-      label={label}
-      onClick={toggle}
-    />
-  )
-}
-
-/** Opt-in link to the local MCP server, so agent access is never silent. */
-function BridgeButton() {
-  const status = useBridge((state) => state.status)
-  const toggle = useBridge((state) => state.toggle)
-
-  return (
-    <button
-      type="button"
-      title={BRIDGE_LABELS[status]}
-      aria-label={BRIDGE_LABELS[status]}
-      aria-pressed={status !== 'off'}
-      onClick={toggle}
-      className={`flex h-8 w-8 items-center justify-center rounded-control transition ${
-        status === 'connected'
-          ? 'bg-ok-soft text-ok'
-          : status === 'connecting'
-            ? 'animate-pulse text-warn'
-            : 'text-ink hover:bg-accent-soft'
-      }`}
-    >
-      {status === 'connected' ? <PlugZap size={16} /> : <Plug size={16} />}
-    </button>
-  )
-}
-
-/** Connection to a chat model: a URL, so any server can be the one that reads. */
-function LlmButton() {
-  const [open, setOpen] = useState(false)
-  const configured = useLlm((state) => state.configured)
-  const model = useLlm((state) => state.config.model)
-  const label = configured
-    ? `Modelo conectado: ${model}. Clic para editar.`
-    : 'Conectar un modelo por URL'
-
-  return (
-    <>
-      <button
-        type="button"
-        title={label}
-        aria-label={label}
-        aria-pressed={configured}
-        onClick={() => setOpen(true)}
-        className={`flex h-8 w-8 items-center justify-center rounded-control transition ${
-          configured ? 'bg-accent-soft text-accent' : 'text-ink hover:bg-accent-soft'
-        }`}
-      >
-        <Sparkles size={16} />
-      </button>
-      {open && <LlmSettings onClose={() => setOpen(false)} />}
     </>
   )
 }
@@ -206,6 +135,7 @@ function LlmButton() {
 export default function TopBar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
 
+  const kind = useDocument((state) => state.kind)
   const title = useDocument((state) => state.meta.title)
   const setMeta = useDocument((state) => state.setMeta)
   const undo = useDocument((state) => state.undo)
@@ -216,21 +146,29 @@ export default function TopBar() {
   const setUi = useDocument((state) => state.setUi)
   const align = useDocument((state) => state.align)
   const distribute = useDocument((state) => state.distribute)
-  const resetDocument = useDocument((state) => state.resetDocument)
   const selectedCount = useDocument(
     (state) => state.nodes.filter((node) => node.selected).length,
   )
+  const closeDiagram = useLibrary((state) => state.closeDiagram)
+  const createDiagram = useLibrary((state) => state.createDiagram)
+  const toggleZen = useView((state) => state.toggleZen)
+  const type = diagramType(kind)
 
   return (
     <header className="glass relative z-30 flex h-14 shrink-0 items-center gap-1 rounded-panel px-3">
-      <div className="flex items-center gap-2 pr-1">
-        <span className="text-[13px] font-semibold tracking-tight text-ink">
-          Oh My Diagrams
-        </span>
-        <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-          UML 2.5
-        </span>
-      </div>
+      <button
+        type="button"
+        onClick={closeDiagram}
+        title="Volver a tus diagramas"
+        className="flex h-8 items-center gap-1.5 rounded-control pl-1 pr-2.5 text-[13px] font-semibold tracking-tight text-ink transition hover:bg-accent-soft"
+      >
+        <ChevronLeft size={16} className="text-faint" />
+        Oh My Diagrams
+      </button>
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+        <type.icon size={11} />
+        {type.title}
+      </span>
 
       <Divider />
 
@@ -245,7 +183,11 @@ export default function TopBar() {
 
       <Divider />
 
-      <ToolButton icon={<FilePlus2 size={16} />} label="Nuevo diagrama" onClick={resetDocument} />
+      <ToolButton
+        icon={<FilePlus2 size={16} />}
+        label={`Nuevo diagrama de ${type.title.toLowerCase()}`}
+        onClick={() => createDiagram(kind)}
+      />
       <ToolButton icon={<FolderOpen size={16} />} label="Abrir JSON (⌘O)" onClick={() => void importJson()} />
       <ToolButton icon={<Save size={16} />} label="Guardar JSON (⌘S)" onClick={exportJson} />
 
@@ -296,9 +238,13 @@ export default function TopBar() {
 
       <Divider />
 
+      <ToolButton
+        icon={<Maximize2 size={16} />}
+        label="Modo zen (Z)"
+        onClick={toggleZen}
+      />
       <ThemeButton />
-      <LlmButton />
-      <BridgeButton />
+      <ConnectionsMenu />
       <ExportMenu />
     </header>
   )

@@ -7,6 +7,8 @@ import {
   type BridgeResult,
   type BridgeRequest,
 } from '../src/bridge/protocol'
+import { handleMcpRequest } from './mcpHttp'
+import { handleOAuthRoute, mcpAuthEnabled } from './oauth'
 
 const CALL_TIMEOUT_MS = 10_000
 
@@ -41,16 +43,28 @@ export class CanvasBridge {
 
   listen(port: number = BRIDGE_PORT): void {
     Bun.serve({
-      // Loopback only: nothing outside this machine may touch the canvas.
-      hostname: '127.0.0.1',
+      // Loopback by default: nothing outside this machine may touch the
+      // canvas. Set OHMYDIAGRAMS_BRIDGE_HOST (e.g. to a VPS deploy's
+      // "0.0.0.0" behind a reverse proxy) to expose it — that's also the
+      // only way the OAuth/`/mcp` surface below becomes reachable at all.
+      hostname: process.env.OHMYDIAGRAMS_BRIDGE_HOST?.trim() || '127.0.0.1',
       port,
-      fetch: (request, server) => {
-        if (new URL(request.url).pathname !== BRIDGE_PATH) {
-          return new Response('Not found', { status: 404 })
+      fetch: async (request, server) => {
+        const pathname = new URL(request.url).pathname
+
+        if (pathname === BRIDGE_PATH) {
+          return server.upgrade(request)
+            ? undefined
+            : new Response('Expected a WebSocket upgrade', { status: 426 })
         }
-        return server.upgrade(request)
-          ? undefined
-          : new Response('Expected a WebSocket upgrade', { status: 426 })
+
+        if (mcpAuthEnabled()) {
+          const oauthResponse = await handleOAuthRoute(request)
+          if (oauthResponse) return oauthResponse
+          if (pathname === '/mcp') return handleMcpRequest(request, this)
+        }
+
+        return new Response('Not found', { status: 404 })
       },
       websocket: {
         open: (socket) => {
