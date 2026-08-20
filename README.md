@@ -67,6 +67,38 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   configurado corre la implementación local y determinista, y con uno conectado
   corre el modelo, sin cambiar nada de la interfaz de usuario.
 
+**Especificacion en Markdown (planillas)**
+- Importador estructurado para documentos que **ya declaran el modelo** en vez
+  de enunciarlo en prosa: un cuadro de actores con su generalizacion, un cuadro
+  de casos de uso por actor, y los cuadros de «include» y «extend». Con esos
+  cuatro cuadros sale el diagrama entero, ubicado y validado, no una lista de
+  candidatos.
+- Tambien lee **planillas sueltas**: un bloque `### CU-01 Nombre` por caso, con
+  su campo "Actor principal" y los pasos `**include** CU-x` del flujo principal.
+  Un archivo que solo tiene planillas alcanza para dibujar.
+- Es la contraparte del lector de requisitos: aquel adivina capacidades a partir
+  de frases y por eso marca cada propuesta como tal; este no infiere nada,
+  porque cada dato lo escribio una persona a proposito.
+- La ubicacion es determinista: el mismo Markdown produce el mismo archivo, asi
+  regenerar despues de editar el documento da un diff revisable y no un lienzo
+  barajado. Los casos de uso entran dentro del limite, los actores quedan
+  afuera, y la cadena de generalizacion se lee de arriba hacia abajo.
+- **Un diagrama por actor** ademas del completo. Cada rebanada lleva los casos
+  que ese actor inicia, mas los que estos incluyen o extienden, y solo los
+  actores que inician alguno de los casos dibujados. Un ancestro cuyos casos no
+  se muestran queda fuera a proposito: dibujarlo dejaria un actor sin ninguna
+  asociacion frente a un hijo con varias, que es justo la forma que la regla 14
+  lee como generalizacion invertida. La herencia pasa al pie del diagrama.
+- Desde la linea de comandos, sin abrir la app:
+
+  ```bash
+  bun run planilla especificacion.md -o diagrama.json --svg --per-actor diagramas/
+  ```
+
+  Imprime lo que leyo, los avisos de lectura y la misma checklist de 17 reglas
+  que muestra el editor. Sale con codigo 2 si alguna regla falla, para poder
+  encadenarlo.
+
 **Agentes (MCP)**
 - Servidor MCP que expone el lienzo abierto a un agente: leer el diagrama,
   crear y conectar elementos, renombrar, borrar y consultar la checklist.
@@ -168,8 +200,12 @@ src/
   ui/             Inicio y paneles: barra superior, paleta, propiedades, checklist
   export/         Renderizador SVG, rasterizador PNG y serialización JSON
   requirements/   Lectura de PDF/Markdown/TXT y extracción de casos de uso
+  planilla/       Importación de una especificación en Markdown ya estructurada:
+                  parser (parse.ts), ubicación determinista (layout.ts) y
+                  rebanado por actor (slice.ts)
   llm/            Cliente de chat compatible con OpenAI y forma de la conexión
   bridge/         Protocolo y cliente del puente con el servidor MCP
+scripts/          Utilidades de línea de comandos (planilla.ts)
 mcp/              Servidor MCP: stdio (server.ts), WebSocket de loopback
                   (bridge.ts), endpoint remoto Streamable HTTP (mcpHttp.ts) y el
                   servidor OAuth 2.1 que lo protege (oauth.ts)

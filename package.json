@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "test": "bun test",
     "mcp": "bun mcp/server.ts",
+    "planilla": "bun scripts/planilla.ts",
     "format": "oxfmt ."
   },
   "dependencies": {
