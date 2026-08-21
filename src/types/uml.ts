@@ -84,6 +84,9 @@ export interface NodeKindSpec {
   z: number
 }
 
+/** The one z below the edge layer. See the boundary spec for why. */
+export const BOUNDARY_Z = -1
+
 export const NODE_SPECS: Record<UmlNodeKind, NodeKindSpec> = {
   boundary: {
     title: 'Límite del sistema',
@@ -94,7 +97,12 @@ export const NODE_SPECS: Record<UmlNodeKind, NodeKindSpec> = {
     minHeight: 160,
     keepAspectRatio: false,
     resizable: true,
-    z: 0,
+    /**
+     * Below zero on purpose: React Flow paints the edge layer before the node
+     * layer, so only a negative z puts the boundary's opaque pane *under* the
+     * relationships that cross it. Everything else starts at 2.
+     */
+    z: BOUNDARY_Z,
   },
   actor: {
     title: 'Actor',

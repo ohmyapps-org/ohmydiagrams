@@ -1,5 +1,6 @@
 import { isDiagramKind } from '../types/document'
 import {
+  BOUNDARY_Z,
   EDGE_SPECS,
   NODE_SPECS,
   isUmlNodeKind,
@@ -69,11 +70,13 @@ export function coerceDocument(parsed: unknown): UmlDocument {
           ? candidate.meta.description
           : '',
     },
-    nodes: nodes.map((node) => ({
-      ...node,
-      selected: false,
-      data: coerceNodeData(node.data, node.type as UmlNodeKind),
-    })),
+    nodes: nodes.map((node) => {
+      const data = coerceNodeData(node.data, node.type as UmlNodeKind)
+      // `data.z` is the document's own order; React Flow reads `zIndex`. Deriving
+      // one from the other here means a file can never load with the two out of
+      // step, whatever wrote it.
+      return { ...node, selected: false, zIndex: data.z, data }
+    }),
     edges: edges.map((edge) => ({
       ...edge,
       type: 'uml',
@@ -103,8 +106,18 @@ function coerceNodeData(raw: unknown, kind: UmlNodeKind): UmlNodeData {
     stroke: colour(data.stroke),
     fontSize: num(data.fontSize, 14),
     lineStyle: data.lineStyle === 'dashed' ? 'dashed' : 'solid',
-    z: num(data.z, NODE_SPECS[kind].z),
+    z: coerceZ(data.z, kind),
   }
+}
+
+/**
+ * Boundaries used to sit at z 0, which is above the edge layer: their pane
+ * covered every relationship crossing them. Files written back then carry that
+ * exact value, so it is read as "the old default" and moved to the new one.
+ */
+function coerceZ(raw: unknown, kind: UmlNodeKind): number {
+  const z = num(raw, NODE_SPECS[kind].z)
+  return kind === 'boundary' && z === 0 ? BOUNDARY_Z : z
 }
 
 function coerceEdgeData(raw: unknown): UmlEdgeData {
