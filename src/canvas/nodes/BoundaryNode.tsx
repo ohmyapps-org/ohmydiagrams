@@ -9,7 +9,9 @@ export const BOUNDARY_HEADER_HEIGHT = 38
 /**
  * System boundary: everything the system does lives inside this rectangle,
  * every actor stays outside. It carries no connection handles because the
- * boundary does not participate in relationships — it contains them.
+ * boundary does not participate in relationships — it contains them, and it is
+ * painted underneath them: its z sits below the edge layer so an association
+ * running from an actor into a use case crosses over the pane, not under it.
  */
 export default function BoundaryNode({ id, data, selected }: NodeProps<UmlNode>) {
   const { editing, setEditing, commitLabel } = useNodeEditing(id)
@@ -17,7 +19,7 @@ export default function BoundaryNode({ id, data, selected }: NodeProps<UmlNode>)
 
   return (
     <div
-      className={`uml-selectable uml-glass flex h-full w-full flex-col rounded-[10px] ${
+      className={`uml-selectable uml-panel flex h-full w-full flex-col rounded-[10px] ${
         flagged ? 'uml-flagged' : ''
       }`}
       style={{

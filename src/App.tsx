@@ -41,7 +41,7 @@ function Workspace() {
       {!zen && <TopBar />}
       <div className="flex min-h-0 flex-1 gap-2.5">
         {!zen && <Palette />}
-        <main className="glass relative min-w-0 flex-1 overflow-hidden rounded-panel">
+        <main className="canvas-panel relative min-w-0 flex-1 overflow-hidden rounded-panel">
           <Canvas onOpenGuide={() => setTab('guide')} />
           <AgentActivity />
           {zen && <ZenExit />}

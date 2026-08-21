@@ -30,7 +30,7 @@
   /* Node fills are translucent so the frosted layer under them reads. The
      exporter keeps its own opaque palette, so files stay flat. */
   --uml-usecase-fill: rgb(255 255 255 / 0.66);
-  --uml-boundary-fill: rgb(59 130 246 / 0.05);
+  --uml-boundary-fill: rgb(237 241 247 / 0.97);
   --uml-boundary-stroke: #94a3b8;
   --uml-note-fill: rgb(255 253 242 / 0.78);
   --uml-note-stroke: #d8cfa8;
@@ -68,7 +68,7 @@
   --uml-ink: #e8eaed;
   --uml-line: #b6bdc8;
   --uml-usecase-fill: rgb(28 32 41 / 0.62);
-  --uml-boundary-fill: rgb(96 165 250 / 0.07);
+  --uml-boundary-fill: rgb(18 21 27 / 0.95);
   --uml-boundary-stroke: #64748b;
   --uml-note-fill: rgb(38 36 27 / 0.74);
   --uml-note-stroke: #5c5638;
@@ -149,6 +149,20 @@ body::before {
 }
 
 /*
+ * The canvas panel is the one surface that must stay pixel sharp at every
+ * zoom, so it takes the glass look without the blur: a backdrop filter turns
+ * everything inside it into one composited texture, and the diagram is then
+ * scaled as a bitmap instead of being redrawn. What it would have blurred is
+ * the ambient gradient, which is already smooth — so nothing is lost but the
+ * resampling.
+ */
+.canvas-panel {
+  background: var(--app-glass);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+}
+
+/*
  * Cards sit on top of panels that already frost the page, so they take a
  * lighter blur. The highlight is baked into the background rather than laid
  * over it, so nothing washes out the text.
@@ -193,8 +207,8 @@ body::before {
 /* --- React Flow overrides ------------------------------------------------ */
 
 .react-flow {
-  /* Transparent, so the frosted canvas panel and the ambient field behind it
-     show through and the nodes have something real to blur. */
+  /* Transparent, so the canvas panel and the ambient field behind it show
+     through and the frosted nodes have something real to blur. */
   --xy-background-color: transparent;
   --xy-edge-stroke-default: var(--uml-line);
   --xy-edge-stroke-selected-default: var(--app-accent);
@@ -305,13 +319,15 @@ body::before {
   border-radius: 2px;
 }
 
-/* Line art has no fill to frost, so its weight comes from a cast shadow. */
-.uml-ink-shadow {
-  filter: drop-shadow(0 3px 8px rgb(15 17 21 / 0.16));
-}
-
-[data-theme="dark"] .uml-ink-shadow {
-  filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.55));
+/*
+ * The system boundary is the one node that is a surface rather than a pane of
+ * glass: it is large enough that frosting it would blur the whole diagram
+ * behind it — grid, relationships and all — into mush. It gets an opaque fill
+ * and a cast shadow instead, and sits below the edge layer so the
+ * relationships crossing it stay on top.
+ */
+.uml-panel {
+  box-shadow: var(--uml-node-shadow);
 }
 
 /* --- Transform box ------------------------------------------------------- */
@@ -449,83 +465,14 @@ button:disabled {
   }
 }
 
-/* --- Thinking orb -------------------------------------------------------- */
-
-/*
- * Live state for an agent driving this canvas. Three gradient lobes orbit at
- * different speeds inside a circular clip, which reads as thinking rather than
- * as a spinner counting down to nothing.
- */
-.orb {
-  position: relative;
-  border-radius: 50%;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--orb-base, var(--app-glass-strong));
-  box-shadow:
-    inset 0 0 0 1px var(--app-border),
-    0 2px 8px rgb(15 17 21 / 0.14);
-  animation: orb-breathe 3.6s ease-in-out infinite;
-}
-
-.orb-lobe {
-  position: absolute;
-  inset: -20%;
-  animation: orb-orbit var(--orb-duration, 7s) linear infinite;
-  will-change: transform;
-}
-
-/* Glass dome: one specular highlight so the orb reads as a sphere. */
-.orb::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle at 32% 26%,
-    rgb(255 255 255 / 0.55),
-    rgb(255 255 255 / 0.06) 45%,
-    transparent 62%
-  );
-}
-
-/* Ring that sweeps only while a call is actually in flight. */
-.orb-ring {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1.5px solid transparent;
-  border-top-color: var(--app-accent);
-  border-right-color: var(--app-accent);
-  animation: orb-orbit 1.1s linear infinite;
-}
-
-.orb--busy {
-  animation-duration: 1.6s;
-}
-
-@keyframes orb-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orb-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.06);
-  }
-}
+/* --- Agent feed --------------------------------------------------------- */
 
 /* One live entry sliding into the activity feed. */
-.orb-entry {
-  animation: orb-entry-in 220ms ease-out;
+.feed-entry {
+  animation: feed-entry-in 220ms ease-out;
 }
 
-@keyframes orb-entry-in {
+@keyframes feed-entry-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
@@ -534,10 +481,7 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after,
-  .orb,
-  .orb-lobe,
-  .orb-ring,
-  .orb-entry {
+  .feed-entry {
     animation: none;
   }
 }

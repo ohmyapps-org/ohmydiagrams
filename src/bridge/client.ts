@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { useAgentActivity } from '../store/agent'
 import { useDocument } from '../store/document'
 import { toast } from '../store/toasts'
+import { focusAfter, focusBefore } from './focus'
 import { runBridgeMethod } from './handlers'
 import {
   BRIDGE_PATH,
@@ -37,14 +38,16 @@ function respond(id: string, method: BridgeMethod, params: unknown): void {
   // Every tool call from any agent — local or remote — funnels through here,
   // so this is the one place the canvas can show what is being done to it.
   const { record } = useAgentActivity.getState()
+  // Measured first: a delete leaves nothing behind to point at.
+  const before = focusBefore(method, params)
   try {
     // The cast is safe: the method is already narrowed, and each handler
     // validates its own params.
     const result = runBridgeMethod(method as never, params as never)
-    record(method, 'ok')
+    record(method, 'ok', focusAfter(method, result, before))
     send({ type: 'response', id, ok: true, result })
   } catch (error) {
-    record(method, 'error')
+    record(method, 'error', before)
     send({
       type: 'response',
       id,

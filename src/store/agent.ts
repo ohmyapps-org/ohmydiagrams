@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { BridgeMethod } from '../bridge/protocol'
+import type { Point } from '../uml/geometry'
 
 /**
  * Tool calls land and finish inside a single tick, so "busy" is held open for a
@@ -19,6 +20,8 @@ export interface AgentEvent {
   label: string
   status: AgentEventStatus
   at: number
+  /** Where on the canvas it happened, if it happened anywhere. */
+  focus: Point | null
 }
 
 /** Spanish label per method, so the feed reads as actions and not as an API. */
@@ -42,7 +45,16 @@ interface AgentState {
   events: AgentEvent[]
   /** Calls handled since the canvas connected. */
   total: number
-  record: (method: BridgeMethod, status: AgentEventStatus) => void
+  /**
+   * The last place work landed, kept after the call ends so the agent's face
+   * can stay where it was instead of snapping back to nowhere.
+   */
+  focus: Point | null
+  record: (
+    method: BridgeMethod,
+    status: AgentEventStatus,
+    focus?: Point | null,
+  ) => void
   reset: () => void
 }
 
@@ -53,8 +65,9 @@ export const useAgentActivity = create<AgentState>((set) => ({
   busy: false,
   events: [],
   total: 0,
+  focus: null,
 
-  record: (method, status) => {
+  record: (method, status, focus = null) => {
     counter += 1
     const event: AgentEvent = {
       id: `call-${counter}`,
@@ -62,10 +75,12 @@ export const useAgentActivity = create<AgentState>((set) => ({
       label: LABELS[method],
       status,
       at: Date.now(),
+      focus,
     }
     set((state) => ({
       busy: true,
       total: state.total + 1,
+      focus: focus ?? state.focus,
       events: [event, ...state.events].slice(0, MAX_EVENTS),
     }))
 
@@ -81,6 +96,6 @@ export const useAgentActivity = create<AgentState>((set) => ({
       clearTimeout(tailTimer)
       tailTimer = null
     }
-    set({ busy: false, events: [], total: 0 })
+    set({ busy: false, events: [], total: 0, focus: null })
   },
 }))

@@ -2,8 +2,9 @@ import { AlertCircle, Check, Copy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from '../store/toasts'
+import Bloub from './agent/Bloub'
+import type { AgentMood } from './agent/pose'
 import Skeleton from './Skeleton'
-import ThinkingOrb, { type OrbTone } from './ThinkingOrb'
 
 interface Platform {
   name: string
@@ -59,9 +60,9 @@ function useConnectorStatus(url: string): Status {
   return status
 }
 
-/** The orb's mood mirrors the probe: still looking, found, or nothing there. */
-const ORB_TONE: Record<Status, OrbTone> = {
-  checking: 'thinking',
+/** The face mirrors the probe: still looking, found it, or nothing there. */
+const PROBE_MOOD: Record<Status, AgentMood> = {
+  checking: 'scan',
   ready: 'ok',
   unavailable: 'error',
 }
@@ -132,12 +133,7 @@ export default function McpConnect({ onClose }: { onClose: () => void }) {
         className="glass w-[26rem] max-w-full rounded-panel p-4"
       >
         <div className="mb-3 flex items-start justify-between gap-2">
-          <ThinkingOrb
-            size={30}
-            tone={ORB_TONE[status]}
-            busy={status === 'checking'}
-            className="mt-0.5"
-          />
+          <Bloub size={34} mood={PROBE_MOOD[status]} className="mt-0.5" />
           <div className="min-w-0 flex-1">
             <h2 className="text-[13.5px] font-semibold text-ink">Conectar tu plataforma de IA</h2>
             <p className="mt-0.5 text-[11.5px] leading-snug text-muted">

@@ -26,6 +26,7 @@ import { GRID_SIZE, type Point } from '../uml/geometry'
 import { centredOn } from '../uml/placement'
 import { canConnect, orientConnection } from '../uml/rules'
 import { createUseCaseSkeleton } from '../uml/templates'
+import AgentPresence from './AgentPresence'
 import ContextMenu, { type ContextMenuTarget } from './ContextMenu'
 import EmptyState from './EmptyState'
 import Markers from './Markers'
@@ -330,6 +331,10 @@ export default function Canvas({ onOpenGuide }: Props) {
           />
         )}
       </ReactFlow>
+
+      {/* Above the flow and below the menus: the agent works in the same space
+          as the diagram, but never takes a click meant for it. */}
+      <AgentPresence />
 
       {nodes.length === 0 && <EmptyState onOpenGuide={onOpenGuide} />}
 

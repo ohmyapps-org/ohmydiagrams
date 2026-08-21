@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useBridge } from '../bridge/client'
 import { useAgentActivity } from '../store/agent'
-import ThinkingOrb, { type OrbTone } from './ThinkingOrb'
+import Bloub from './agent/Bloub'
+import { useAgentState } from './agent/mood'
 
 const RELATIVE = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
 
@@ -19,9 +20,8 @@ function secondsAgo(at: number): string {
  */
 export default function AgentActivity() {
   const status = useBridge((state) => state.status)
-  const busy = useAgentActivity((state) => state.busy)
+  const { mood, busy, latest, total } = useAgentState()
   const events = useAgentActivity((state) => state.events)
-  const total = useAgentActivity((state) => state.total)
   const [open, setOpen] = useState(false)
   /** Re-renders the "hace N s" labels while the panel is open. */
   const [, setTick] = useState(0)
@@ -35,18 +35,7 @@ export default function AgentActivity() {
   // Nothing to report until the canvas is actually reachable by an agent.
   if (status === 'off') return null
 
-  const latest = events[0]
   const failed = latest?.status === 'error'
-  const tone: OrbTone =
-    status === 'connecting'
-      ? 'idle'
-      : busy
-        ? 'thinking'
-        : failed
-          ? 'error'
-          : total > 0
-            ? 'ok'
-            : 'idle'
 
   const headline =
     status === 'connecting'
@@ -68,7 +57,7 @@ export default function AgentActivity() {
         aria-expanded={open}
         className="glass flex w-full items-center gap-2 rounded-panel py-1.5 pl-1.5 pr-2.5 text-left transition hover:ring-1 hover:ring-accent"
       >
-        <ThinkingOrb size={22} tone={tone} busy={busy} />
+        <Bloub size={26} mood={mood} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12px] font-medium text-ink">
             {headline}
@@ -84,7 +73,7 @@ export default function AgentActivity() {
           {events.map((event) => (
             <li
               key={event.id}
-              className="orb-entry flex items-baseline gap-2 rounded-control px-1.5 py-1"
+              className="feed-entry flex items-baseline gap-2 rounded-control px-1.5 py-1"
             >
               <span
                 aria-hidden

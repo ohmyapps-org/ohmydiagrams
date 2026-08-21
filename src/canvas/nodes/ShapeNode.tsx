@@ -24,7 +24,7 @@ export default function ShapeNode({ id, type, data, selected }: NodeProps<UmlNod
       {/* Frosted layer clipped to the silhouette, behind the drawn shape. */}
       <div className={`uml-glass-layer uml-glass-layer--${kind}`} aria-hidden />
       <svg
-        className="uml-ink-shadow absolute inset-0 h-full w-full"
+        className="absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden
