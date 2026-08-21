@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Local tool output
+graphify-out
