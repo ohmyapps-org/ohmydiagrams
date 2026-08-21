@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { CanvasBridge } from './bridge'
-import { verifyAccessToken } from './oauth'
+import { publicOrigin, verifyAccessToken } from './oauth'
 import { registerTools } from './tools'
 
 /**
@@ -37,7 +37,7 @@ function unauthorized(origin: string): Response {
 }
 
 export async function handleMcpRequest(request: Request, bridge: CanvasBridge): Promise<Response> {
-  const origin = new URL(request.url).origin
+  const origin = publicOrigin(request)
   const authHeader = request.headers.get('Authorization')
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
   if (!token || !verifyAccessToken(token)) return unauthorized(origin)

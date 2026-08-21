@@ -128,6 +128,26 @@ export function verifyAccessToken(token: string): AccessTokenInfo | null {
   return { token, clientId: stored.clientId, scopes: stored.scope, expiresAt: Math.floor(stored.expiresAt / 1000) }
 }
 
+/**
+ * The origin a connector sees, which is not the one Bun sees. TLS is
+ * terminated by a reverse proxy and the bridge is handed a plain HTTP request
+ * on loopback, so `request.url` always reads `http://`. Publishing that as the
+ * issuer of an https resource is rejected by every OAuth 2.1 client, and the
+ * registration attempt fails before it starts.
+ *
+ * Trusting these headers is only safe because the bridge binds 127.0.0.1, so
+ * the proxy in front of it is the sole possible sender. Exposing the port
+ * directly (OHMYDIAGRAMS_BRIDGE_HOST) would let a caller name its own origin.
+ */
+export function publicOrigin(request: Request): string {
+  const url = new URL(request.url)
+  const first = (value: string | null): string | undefined =>
+    value?.split(',')[0]?.trim() || undefined
+  const proto = first(request.headers.get('x-forwarded-proto')) ?? url.protocol.replace(':', '')
+  const host = first(request.headers.get('x-forwarded-host')) ?? url.host
+  return `${proto}://${host}`
+}
+
 function metadata(origin: string) {
   const issuer = origin
   return {
@@ -339,7 +359,7 @@ function issueTokens(clientId: string, scope: string[]) {
  */
 export async function handleOAuthRoute(request: Request): Promise<Response | null> {
   const url = new URL(request.url)
-  const origin = url.origin
+  const origin = publicOrigin(request)
 
   if (request.method === 'OPTIONS' && isOAuthPath(url.pathname)) {
     return new Response(null, { status: 204, headers: CORS_HEADERS })
