@@ -140,10 +140,16 @@ body::before {
     radial-gradient(52rem 38rem at 68% 104%, var(--app-ambient-c), transparent 62%);
 }
 
+/*
+ * Never hand-write -webkit-backdrop-filter next to the standard property here.
+ * Lightning CSS merges the pair and emits only the last one it sees, so the
+ * prefixed line silently deletes the standard one from the build and every
+ * glass surface loses its blur in Firefox. Authoring the plain property alone
+ * makes the build emit both.
+ */
 .glass {
   background: var(--app-glass);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--app-border);
   box-shadow: var(--app-shadow);
 }
@@ -172,7 +178,6 @@ body::before {
     linear-gradient(to bottom, rgb(255 255 255 / 0.3), transparent 45%),
     var(--app-glass);
   backdrop-filter: blur(14px) saturate(170%);
-  -webkit-backdrop-filter: blur(14px) saturate(170%);
   border: 1px solid var(--app-border);
   box-shadow: var(--app-shadow);
   transition:
@@ -294,7 +299,6 @@ body::before {
  */
 .uml-glass {
   backdrop-filter: blur(7px) saturate(150%);
-  -webkit-backdrop-filter: blur(7px) saturate(150%);
   box-shadow: var(--uml-node-shadow);
 }
 
@@ -304,7 +308,6 @@ body::before {
   inset: 0;
   pointer-events: none;
   backdrop-filter: blur(7px) saturate(150%);
-  -webkit-backdrop-filter: blur(7px) saturate(150%);
 }
 
 .uml-glass-layer--ellipse {
