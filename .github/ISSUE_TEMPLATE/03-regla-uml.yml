@@ -1,0 +1,52 @@
+name: Una regla de validación se equivoca
+description: La checklist marca algo que está bien, deja pasar algo que está mal, o lo explica de forma confusa.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Las 17 reglas viven en `src/uml/validation.ts` y son funciones puras, así
+        que un diagrama de ejemplo se convierte directo en un caso de test. Cuanto
+        más chico el diagrama, mejor.
+
+  - type: input
+    id: regla
+    attributes:
+      label: Qué regla
+      description: El texto que muestra la checklist, o su número.
+      placeholder: "Regla 14: la generalización entre actores va del específico al general"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Qué hace mal
+      options:
+        - Marca en rojo un diagrama que está bien
+        - Deja pasar un diagrama que está mal
+        - El mensaje o la corrección que sugiere confunde
+        - El arreglo de un clic deja el diagrama peor
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagrama
+    attributes:
+      label: El diagrama
+      description: Exportalo a JSON y arrastrá el archivo acá, o describí los elementos y las relaciones.
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué debería decir la checklist
+    validations:
+      required: true
+
+  - type: textarea
+    id: fuente
+    attributes:
+      label: Qué dice UML 2.5
+      description: La sección de la especificación, o el material en el que te basás. Sirve para no cambiar una regla contra otra fuente.

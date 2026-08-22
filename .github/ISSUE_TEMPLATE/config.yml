@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Estado del proyecto
+    url: https://github.com/ohmyapps-org/ohmydiagrams/blob/main/docs/ESTADO.md
+    about: Qué está terminado, qué está a medias y qué todavía nadie probó. Miralo antes de abrir un issue.
+  - name: Cómo funciona el conector MCP
+    url: https://github.com/ohmyapps-org/ohmydiagrams/blob/main/mcp/README.md
+    about: Configuración del conector remoto y del puente local, antes de reportar que un agente no conecta.

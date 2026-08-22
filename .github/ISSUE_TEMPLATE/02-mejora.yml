@@ -1,0 +1,56 @@
+name: Propuesta de mejora
+description: Una función nueva o un cambio en una que ya está.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Contá primero el problema y después la solución que imaginás. Muchas
+        veces el problema tiene una salida más corta que la que uno trae pensada.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Lienzo y edición
+        - Validación UML (las 17 reglas)
+        - Requisitos (importar PDF, Markdown o TXT)
+        - Planillas (importador estructurado de Markdown)
+        - Exportación (SVG, PNG, JSON)
+        - Biblioteca (diagramas guardados)
+        - Agentes y conector MCP
+        - Proveedores de modelo (LLM)
+        - Otra cosa
+    validations:
+      required: true
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema resuelve
+      description: Qué estabas haciendo cuando lo necesitaste.
+    validations:
+      required: true
+
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Cómo lo imaginás
+      description: Qué verías en pantalla, o qué haría la herramienta del lado del agente.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Cómo lo resolvés hoy
+      description: El rodeo que estás haciendo mientras tanto, si hay alguno.
+
+  - type: checkboxes
+    id: alcance
+    attributes:
+      label: Alcance
+      options:
+        - label: Esto no cambia lo que UML 2.5 dice, sólo cómo lo muestra o lo edita la aplicación.
+        - label: Esto cambia o agrega una regla de validación (contalo en el issue de regla, si es sólo eso).
