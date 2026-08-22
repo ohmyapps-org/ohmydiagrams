@@ -23,6 +23,9 @@ export default defineConfig({
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),
   ],
+  // pdf.js loads its worker with `type: 'module'`, so the chunk Vite emits for
+  // it has to be an ES module rather than Vite's default IIFE bundle.
+  worker: { format: 'es' },
   server: {
     // Vite does not read PORT on its own. Honouring it lets a harness place
     // this server on a free port; unset, Vite falls back to its own default.
