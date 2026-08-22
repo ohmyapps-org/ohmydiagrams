@@ -24,6 +24,9 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
   ],
   server: {
+    // Vite does not read PORT on its own. Honouring it lets a harness place
+    // this server on a free port; unset, Vite falls back to its own default.
+    port: process.env.PORT ? Number(process.env.PORT) : undefined,
     proxy: {
       '/mcp': bridge,
       '/authorize': bridge,
