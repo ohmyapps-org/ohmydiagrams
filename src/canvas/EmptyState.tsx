@@ -19,15 +19,9 @@ export default function EmptyState({ onOpenGuide }: Props) {
           strokeWidth={1.5}
         />
         <h2 className="mb-1.5 text-base font-semibold text-ink">
-          {kind === 'useCase'
-            ? 'Empezá tu diagrama de casos de uso'
-            : `Empezá tu diagrama de ${type.title.toLowerCase()}`}
+          Empezá tu diagrama de {type.title.toLowerCase()}
         </h2>
-        <p className="text-[13px] leading-relaxed text-muted">
-          {type.ready
-            ? 'Arrastrá actores y casos de uso desde la paleta de la izquierda. La validación de la derecha te va marcando en vivo lo que falta para que el diagrama cumpla UML 2.5.'
-            : 'Arrastrá formas desde la paleta de la izquierda. Este tipo de diagrama todavía no tiene reglas propias: se guarda y se exporta igual.'}
-        </p>
+        <p className="text-[13px] leading-relaxed text-muted">{type.emptyHint}</p>
         {type.guide.length > 0 && (
           <button
             type="button"

@@ -1,9 +1,15 @@
 import {
   ArrowRight,
+  Box,
+  Boxes,
   Circle,
   ClipboardCheck,
+  FileCode,
   Diamond,
   Frame,
+  Gem,
+  Layers,
+  List,
   Minus,
   Split,
   Square,
@@ -18,7 +24,8 @@ import {
 import type { DiagramKind } from '../types/document'
 import { DIAGRAM_KINDS } from '../types/document'
 import type { UmlEdge, UmlNode } from '../types/uml'
-import { GUIDE_STEPS } from '../uml/guide'
+import { validateClass } from '../uml/classValidation'
+import { CLASS_GUIDE_STEPS, GUIDE_STEPS } from '../uml/guide'
 import { validate } from '../uml/validation'
 import type { DiagramType, PaletteGroup } from './types'
 
@@ -75,6 +82,51 @@ const USE_CASE_GROUPS: readonly PaletteGroup[] = [
   { title: 'Conectores básicos', connectors: BASIC_CONNECTORS },
 ]
 
+const CLASS_GROUPS: readonly PaletteGroup[] = [
+  {
+    title: 'UML Clase',
+    shapes: [
+      {
+        kind: 'class',
+        icon: Box,
+        hint: 'Clasificador con nombre, atributos y operaciones.',
+      },
+      {
+        kind: 'interface',
+        icon: Layers,
+        hint: 'Contrato. Una clase lo realiza con el conector de realización.',
+      },
+      {
+        kind: 'enumeration',
+        icon: List,
+        hint: 'Conjunto cerrado de literales. Van en el compartimento de atributos.',
+      },
+      { kind: 'note', icon: StickyNote, hint: 'Anotación libre.' },
+    ],
+  },
+  {
+    title: 'Relaciones UML',
+    connectors: [
+      { kind: 'association', icon: Minus },
+      { kind: 'aggregation', icon: Diamond },
+      { kind: 'composition', icon: Gem },
+      { kind: 'generalization', icon: Triangle },
+      { kind: 'realization', icon: Triangle },
+      { kind: 'dependency', icon: ArrowRight },
+    ],
+  },
+  {
+    title: 'Básicas',
+    shapes: [
+      { kind: 'rectangle', icon: Square, hint: 'Forma genérica.' },
+      { kind: 'ellipse', icon: Circle, hint: 'Forma genérica.' },
+      { kind: 'diamond', icon: Diamond, hint: 'Decisión en flujos ad-hoc.' },
+      { kind: 'text', icon: Type, hint: 'Etiqueta suelta.' },
+    ],
+  },
+  { title: 'Conectores básicos', connectors: BASIC_CONNECTORS },
+]
+
 /** A kind with no notation of its own has nothing to check, only to draw. */
 function noRules(nodes: readonly UmlNode[], edges: readonly UmlEdge[]) {
   return {
@@ -93,11 +145,28 @@ export const DIAGRAM_TYPES: Record<DiagramKind, DiagramType> = {
       'UML 2.5 con la checklist en vivo: actores, casos de uso y límite del sistema.',
     icon: Users,
     ready: true,
+    emptyHint:
+      'Arrastrá actores y casos de uso desde la paleta de la izquierda. La validación de la derecha te va marcando en vivo lo que falta para que el diagrama cumpla UML 2.5.',
     palette: USE_CASE_GROUPS,
     guide: GUIDE_STEPS,
     requirements: true,
     defaultEdgeKind: 'association',
     validate,
+  },
+  class: {
+    kind: 'class',
+    title: 'Clases',
+    description:
+      'UML 2.5 con la checklist en vivo: clases, interfaces, herencia, agregación y composición.',
+    icon: Boxes,
+    ready: true,
+    emptyHint:
+      'Arrastrá clases desde la paleta de la izquierda. La validación de la derecha te va marcando en vivo lo que falta para que el diagrama cumpla UML 2.5.',
+    palette: CLASS_GROUPS,
+    guide: CLASS_GUIDE_STEPS,
+    requirements: false,
+    defaultEdgeKind: 'association',
+    validate: validateClass,
   },
   flow: {
     kind: 'flow',
@@ -105,6 +174,8 @@ export const DIAGRAM_TYPES: Record<DiagramKind, DiagramType> = {
     description: 'Procesos paso a paso con decisiones y ramas.',
     icon: Workflow,
     ready: false,
+    emptyHint:
+      'Arrastrá formas desde la paleta de la izquierda. Este tipo de diagrama todavía no tiene reglas propias: se guarda y se exporta igual.',
     palette: BASIC_GROUPS,
     guide: [],
     requirements: false,
@@ -117,6 +188,8 @@ export const DIAGRAM_TYPES: Record<DiagramKind, DiagramType> = {
     description: 'Casos de prueba y cobertura de escenarios.',
     icon: ClipboardCheck,
     ready: false,
+    emptyHint:
+      'Arrastrá formas desde la paleta de la izquierda. Este tipo de diagrama todavía no tiene reglas propias: se guarda y se exporta igual.',
     palette: BASIC_GROUPS,
     guide: [],
     requirements: false,
@@ -129,7 +202,23 @@ export const DIAGRAM_TYPES: Record<DiagramKind, DiagramType> = {
     description: 'Disparadores, condiciones y acciones encadenadas.',
     icon: Zap,
     ready: false,
+    emptyHint:
+      'Arrastrá formas desde la paleta de la izquierda. Este tipo de diagrama todavía no tiene reglas propias: se guarda y se exporta igual.',
     palette: BASIC_GROUPS,
+    guide: [],
+    requirements: false,
+    defaultEdgeKind: 'arrow',
+    validate: noRules,
+  },
+  text: {
+    kind: 'text',
+    title: 'Texto (Mermaid)',
+    description:
+      'Escribí el diagrama como texto Mermaid y se dibuja al instante. Ideal para que lo escriba una IA.',
+    icon: FileCode,
+    ready: true,
+    emptyHint: '',
+    palette: [],
     guide: [],
     requirements: false,
     defaultEdgeKind: 'arrow',

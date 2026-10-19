@@ -12,7 +12,16 @@ function node(kind: UmlNodeKind, label: string, x = 0, y = 0): UmlNode {
     position: { x, y },
     width: spec.width,
     height: spec.height,
-    data: { label, fill: null, stroke: null, fontSize: 14, lineStyle: 'solid', z: spec.z },
+    data: {
+      label,
+      fill: null,
+      stroke: null,
+      fontSize: 14,
+      lineStyle: 'solid',
+      z: spec.z,
+      attributes: [],
+      operations: [],
+    },
   }
 }
 

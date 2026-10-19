@@ -50,3 +50,48 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
     example: '17 de 17 verificaciones en verde',
   },
 ]
+
+export const CLASS_GUIDE_STEPS: readonly GuideStep[] = [
+  {
+    id: 'class-identify',
+    title: 'Identificá las clases del dominio',
+    guidance:
+      'Cada clase es un sustantivo del negocio: una cosa que el sistema tiene que conocer y de la que guarda estado. El nombre va en singular, con mayúscula inicial, nunca un verbo.',
+    example: 'Cliente, Pedido, Producto',
+  },
+  {
+    id: 'class-members',
+    title: 'Agregá atributos y operaciones',
+    guidance:
+      'Los atributos describen el estado (+nombre: String). Las operaciones describen el comportamiento (+confirmar(): void). Doble clic en cada compartimento para editarlo. En una enumeración, los literales van en el compartimento de atributos.',
+    example: '-email: String  /  +registrar(): void',
+  },
+  {
+    id: 'class-associate',
+    title: 'Relacioná con asociaciones',
+    guidance:
+      'La asociación es una línea sólida entre dos clasificadores. La etiqueta puede llevar la multiplicidad o el rol (1, 0..*, "realiza"). No indica flujo: indica que las instancias se conocen.',
+    example: 'Cliente —— Pedido',
+  },
+  {
+    id: 'class-whole-part',
+    title: 'Marcá todo/parte con agregación o composición',
+    guidance:
+      'Agregación (diamante hueco): el todo usa las partes, pero ellas pueden vivir solas. Composición (diamante relleno): las partes no existen sin el todo. Arrastrá siempre del todo hacia la parte.',
+    example: 'Pedido ◆—— Línea de pedido',
+  },
+  {
+    id: 'class-inheritance',
+    title: 'Agregá herencia y realizaciones',
+    guidance:
+      'Generalización: el triángulo hueco se apoya en el padre, el hijo es el origen. Realización (línea punteada con triángulo): una clase implementa una interfaz. Arrastrá de la clase a la interfaz.',
+    example: 'Pedido ⇢«realiza»⇢ Pagable',
+  },
+  {
+    id: 'class-validate',
+    title: 'Corregí la pestaña Validación y exportá',
+    guidance:
+      'Revisá la pestaña Validación hasta que no quede ningún ítem en rojo. Recién ahí exportá el diagrama en PNG o SVG para entregarlo.',
+    example: '12 de 12 verificaciones en verde',
+  },
+]

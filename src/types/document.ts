@@ -4,13 +4,15 @@
  * guide; everything else in the editor is kind-agnostic.
  */
 
-export type DiagramKind = 'useCase' | 'flow' | 'qa' | 'automation'
+export type DiagramKind = 'useCase' | 'class' | 'flow' | 'qa' | 'automation' | 'text'
 
 export const DIAGRAM_KINDS: readonly DiagramKind[] = [
   'useCase',
+  'class',
   'flow',
   'qa',
   'automation',
+  'text',
 ]
 
 export function isDiagramKind(value: unknown): value is DiagramKind {
@@ -28,6 +30,8 @@ export interface LibraryEntry {
   updatedAt: number
   nodeCount: number
   edgeCount: number
+  /** Lines of Mermaid source; only text diagrams have any. */
+  lineCount?: number
 }
 
 /** An imported requirements file, kept so it can be read again later. */

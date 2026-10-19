@@ -28,6 +28,8 @@ export interface DiagramSummary {
     position: BridgePoint
     width: number
     height: number
+    attributes: string[]
+    operations: string[]
   }[]
   edges: { id: string; kind: UmlEdgeKind; label: string; source: string; target: string }[]
 }
@@ -39,6 +41,23 @@ export interface ValidationSummary {
     ValidationItem,
     'number' | 'title' | 'status' | 'message' | 'suggestion' | 'elementIds'
   >[]
+}
+
+/** What pele made of a text diagram's source: the check an agent iterates on. */
+export interface SourceVerdict {
+  /** True when the text draws. An empty source is not valid. */
+  valid: boolean
+  /** Diagram family pele detected, when it drew. */
+  diagram?: string
+  /** Where and why it failed, in a line an agent can act on. */
+  error?: string
+  line?: number
+  column?: number
+}
+
+export interface SourceSummary extends SourceVerdict {
+  title: string
+  source: string
 }
 
 /** Every callable method, with its params and its result. */
@@ -60,7 +79,13 @@ export interface BridgeMethods {
     result: { id: string }
   }
   updateNode: {
-    params: { id: string; label?: string; position?: BridgePoint }
+    params: {
+      id: string
+      label?: string
+      position?: BridgePoint
+      attributes?: string[]
+      operations?: string[]
+    }
     result: { id: string }
   }
   deleteElements: {
@@ -74,6 +99,14 @@ export interface BridgeMethods {
   insertSkeleton: {
     params: { center?: BridgePoint }
     result: { ids: string[] }
+  }
+  getSource: {
+    params: Record<string, never>
+    result: SourceSummary
+  }
+  setSource: {
+    params: { source: string }
+    result: SourceVerdict
   }
   loadDocument: {
     params: { document: UmlDocument }
@@ -98,6 +131,8 @@ export const BRIDGE_METHODS: readonly BridgeMethod[] = [
   'deleteElements',
   'setMeta',
   'insertSkeleton',
+  'getSource',
+  'setSource',
   'loadDocument',
   'clear',
 ]

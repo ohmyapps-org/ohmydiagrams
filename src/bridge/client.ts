@@ -34,7 +34,7 @@ function send(message: BridgeClientMessage): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
 }
 
-function respond(id: string, method: BridgeMethod, params: unknown): void {
+async function respond(id: string, method: BridgeMethod, params: unknown): Promise<void> {
   // Every tool call from any agent — local or remote — funnels through here,
   // so this is the one place the canvas can show what is being done to it.
   const { record } = useAgentActivity.getState()
@@ -43,7 +43,7 @@ function respond(id: string, method: BridgeMethod, params: unknown): void {
   try {
     // The cast is safe: the method is already narrowed, and each handler
     // validates its own params.
-    const result = runBridgeMethod(method as never, params as never)
+    const result = await runBridgeMethod(method as never, params as never)
     record(method, 'ok', focusAfter(method, result, before))
     send({ type: 'response', id, ok: true, result })
   } catch (error) {
@@ -99,7 +99,7 @@ export const useBridge = create<BridgeState>((set, get) => {
         return
       }
       if (!isBridgeRequest(payload)) return
-      respond(payload.id, payload.method, payload.params)
+      void respond(payload.id, payload.method, payload.params)
     }
 
     next.onclose = () => {

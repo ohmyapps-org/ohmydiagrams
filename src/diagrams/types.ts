@@ -43,6 +43,8 @@ export interface DiagramType {
    * any other diagram.
    */
   ready: boolean
+  /** Copy shown on an empty canvas. */
+  emptyHint: string
   palette: readonly PaletteGroup[]
   guide: readonly GuideStep[]
   /** Whether the requirements reader proposes elements for this kind. */

@@ -1,5 +1,6 @@
 import {
   EDGE_SPECS,
+  isClassifierKind,
   type UmlEdgeKind,
   type UmlNode,
   type UmlNodeKind,
@@ -54,14 +55,49 @@ export function canConnect(
     )
   }
 
-  if (!UML_ENDPOINTS.includes(from) || !UML_ENDPOINTS.includes(to)) {
-    return deny(
-      `Una relación ${EDGE_SPECS[kind].title} sólo puede unir actores o casos de uso.`,
-    )
+  if (kind === 'aggregation' || kind === 'composition') {
+    if (selfLink) {
+      return deny(
+        kind === 'composition'
+          ? 'Una clase no puede componerse a sí misma.'
+          : 'Una clase no puede agregarse a sí misma.',
+      )
+    }
+    if (!isClassifierKind(from) || !isClassifierKind(to)) {
+      return deny('Agregación y composición unen clases, interfaces o enumeraciones.')
+    }
+    return OK
+  }
+
+  if (kind === 'dependency') {
+    if (selfLink) return deny('Una dependencia necesita dos elementos distintos.')
+    if (!isClassifierKind(from) || !isClassifierKind(to)) {
+      return deny(
+        'La dependencia une clasificadores (clases, interfaces o enumeraciones).',
+      )
+    }
+    return OK
+  }
+
+  if (kind === 'realization') {
+    if (selfLink) return deny('Una clase no puede realizar su propia interfaz.')
+    if (from !== 'class' && from !== 'enumeration') {
+      return deny('La realización va de una clase hacia una interfaz.')
+    }
+    if (to !== 'interface') {
+      return deny('La realización apunta a una interfaz.')
+    }
+    return OK
   }
 
   switch (kind) {
     case 'association':
+      if (isClassifierKind(from) && isClassifierKind(to)) return OK
+      if (!UML_ENDPOINTS.includes(from) || !UML_ENDPOINTS.includes(to)) {
+        return deny(
+          'Una asociación une un actor con un caso de uso, o dos clasificadores.',
+        )
+      }
       if (from === to) {
         return deny(
           from === 'actor'
@@ -91,7 +127,14 @@ export function canConnect(
       if (selfLink) return deny('Un elemento no puede generalizar a sí mismo.')
       if (from !== to) {
         return deny(
-          'La generalización une elementos del mismo tipo: actor con actor, o caso de uso con caso de uso.',
+          isClassifierKind(from) || isClassifierKind(to)
+            ? 'La generalización une clasificadores del mismo tipo. Para que una clase implemente una interfaz usá Realización.'
+            : 'La generalización une elementos del mismo tipo: actor con actor, o caso de uso con caso de uso.',
+        )
+      }
+      if (from !== 'actor' && from !== 'useCase' && !isClassifierKind(from)) {
+        return deny(
+          `Una relación ${EDGE_SPECS[kind].title} sólo une actores, casos de uso o clasificadores.`,
         )
       }
       return OK
@@ -119,10 +162,15 @@ export function orientConnection(
 
 /** Short hint shown under the palette while a connector kind is armed. */
 export const CONNECTION_HINTS: Record<UmlEdgeKind, string> = {
-  association: 'Arrastrá de un actor a un caso de uso.',
+  association: 'Arrastrá de un actor a un caso de uso, o entre dos clases.',
   include: 'Arrastrá del caso base al caso incluido.',
   extend: 'Arrastrá del caso que extiende al caso base.',
   generalization: 'Arrastrá del hijo al padre.',
+  aggregation: 'Arrastrá del todo a la parte. El diamante hueco queda en el todo.',
+  composition:
+    'Arrastrá del compuesto a la parte. El diamante relleno queda en el compuesto.',
+  dependency: 'Arrastrá del elemento que depende al que usa.',
+  realization: 'Arrastrá de la clase a la interfaz que implementa.',
   noteLink: 'Arrastrá de una nota al elemento que anota.',
   arrow: 'Arrastrá entre dos elementos cualesquiera.',
 }

@@ -3,6 +3,7 @@ import { Minimize2 } from 'lucide-react'
 import { useState } from 'react'
 import Canvas from './canvas/Canvas'
 import { useShortcuts } from './hooks/useShortcuts'
+import { useDocument } from './store/document'
 import { useLibrary } from './store/library'
 import { useView } from './store/view'
 import AgentActivity from './ui/AgentActivity'
@@ -10,6 +11,7 @@ import ChecklistPanel, { type ChecklistTab } from './ui/ChecklistPanel'
 import Home from './ui/Home'
 import Palette from './ui/Palette'
 import PropertiesPanel from './ui/PropertiesPanel'
+import TextWorkspace from './ui/TextWorkspace'
 import Toasts from './ui/Toasts'
 import TopBar from './ui/TopBar'
 
@@ -62,6 +64,7 @@ function Workspace() {
 
 export default function App() {
   const activeId = useLibrary((state) => state.activeId)
+  const kind = useDocument((state) => state.kind)
 
   if (!activeId) {
     return (
@@ -71,6 +74,9 @@ export default function App() {
       </>
     )
   }
+
+  // A text diagram has no canvas, so it never mounts React Flow.
+  if (kind === 'text') return <TextWorkspace />
 
   return (
     <ReactFlowProvider>

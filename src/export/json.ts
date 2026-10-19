@@ -14,6 +14,9 @@ import {
   type Waypoint,
 } from '../types/uml'
 
+/** A hand-written diagram is a few KB; this only stops a hostile file. */
+export const MAX_SOURCE_CHARS = 200_000
+
 /**
  * Parses a saved document. Imported files are treated as untrusted: anything
  * malformed is rejected outright rather than half-loaded, and stale selection
@@ -70,6 +73,9 @@ export function coerceDocument(parsed: unknown): UmlDocument {
           ? candidate.meta.description
           : '',
     },
+    ...(candidate.kind === 'text' && typeof candidate.source === 'string'
+      ? { source: candidate.source.slice(0, MAX_SOURCE_CHARS) }
+      : {}),
     nodes: nodes.map((node) => {
       const data = coerceNodeData(node.data, node.type as UmlNodeKind)
       // `data.z` is the document's own order; React Flow reads `zIndex`. Deriving
@@ -98,6 +104,11 @@ function colour(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
 function coerceNodeData(raw: unknown, kind: UmlNodeKind): UmlNodeData {
   const data = (raw ?? {}) as Record<string, unknown>
   return {
@@ -107,6 +118,8 @@ function coerceNodeData(raw: unknown, kind: UmlNodeKind): UmlNodeData {
     fontSize: num(data.fontSize, 14),
     lineStyle: data.lineStyle === 'dashed' ? 'dashed' : 'solid',
     z: coerceZ(data.z, kind),
+    attributes: stringList(data.attributes),
+    operations: stringList(data.operations),
   }
 }
 

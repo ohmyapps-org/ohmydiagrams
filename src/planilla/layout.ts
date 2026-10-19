@@ -284,6 +284,8 @@ function node(
       fontSize: kind === 'boundary' ? 15 : 14,
       lineStyle: 'solid',
       z: spec.z,
+      attributes: [],
+      operations: [],
     },
     zIndex: spec.z,
     selected: false,
