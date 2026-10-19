@@ -73,17 +73,19 @@ Tres cosas que conviene tener claras:
 
 ## Herramientas
 
-| Herramienta | Qué hace |
-| --- | --- |
-| `get_diagram` | Título, descripción, nodos y relaciones con sus ids |
-| `get_validation` | Las 17 reglas UML 2.5 evaluadas contra el diagrama abierto |
-| `add_node` | Agrega actor, caso de uso, límite, nota, texto o forma básica |
-| `add_edge` | Conecta dos elementos; si viola UML 2.5 falla y explica la regla |
-| `update_node` | Renombra y/o mueve una forma |
-| `delete_elements` | Borra nodos y relaciones por id |
-| `set_meta` | Título y descripción del diagrama |
-| `insert_skeleton` | Inserta el esqueleto de ejemplo (límite, actor, 3 casos de uso) |
-| `clear_diagram` | Vacía el lienzo (deshacible con ⌘Z) |
+| Herramienta       | Qué hace                                                                               |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `get_diagram`     | Título, descripción, nodos y relaciones con sus ids (diagramas dibujados)              |
+| `get_source`      | Texto Mermaid y si dibuja (diagramas de texto)                                         |
+| `set_source`      | Reemplaza el texto Mermaid; devuelve el veredicto de pele con línea y columna si falla |
+| `get_validation`  | Las 17 reglas UML 2.5 evaluadas contra el diagrama abierto                             |
+| `add_node`        | Agrega actor, caso de uso, límite, nota, texto o forma básica                          |
+| `add_edge`        | Conecta dos elementos; si viola UML 2.5 falla y explica la regla                       |
+| `update_node`     | Renombra y/o mueve una forma                                                           |
+| `delete_elements` | Borra nodos y relaciones por id                                                        |
+| `set_meta`        | Título y descripción del diagrama                                                      |
+| `insert_skeleton` | Inserta el esqueleto de ejemplo (límite, actor, 3 casos de uso)                        |
+| `clear_diagram`   | Vacía el lienzo (deshacible con ⌘Z)                                                    |
 
 Las relaciones inválidas no se crean: `add_edge` devuelve el mismo texto que ve
 una persona al intentar el arrastre, por ejemplo *"Una asociación no une dos

@@ -49,7 +49,7 @@ interface RuleContext {
   boundaries: UmlNode[]
 }
 
-function pass(
+export function pass(
   number: number,
   id: string,
   title: string,
@@ -67,7 +67,7 @@ function pass(
   }
 }
 
-function fail(
+export function fail(
   number: number,
   id: string,
   title: string,
@@ -619,7 +619,7 @@ export interface ValidationReport {
  * The same rule, unevaluated. An empty canvas breaks no rule: reporting 17
  * failures before the first shape is drawn is noise, not feedback.
  */
-function waiting(item: ValidationItem): ValidationItem {
+export function waiting(item: ValidationItem): ValidationItem {
   return {
     ...item,
     status: 'idle',

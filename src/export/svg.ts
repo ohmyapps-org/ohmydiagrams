@@ -1,6 +1,8 @@
 import {
   EDGE_SPECS,
   NODE_SPECS,
+  classifierStereotype,
+  memberLines,
   type UmlDocument,
   type UmlEdge,
   type UmlNode,
@@ -35,6 +37,7 @@ const PALETTE = {
   noteFill: '#fffdf2',
   noteStroke: '#d8cfa8',
   shapeFill: '#ffffff',
+  classFill: '#ffffff',
 } as const
 
 const LINE_HEIGHT = 1.25
@@ -67,6 +70,7 @@ function resolveVar(cssVar: string): string {
     'var(--uml-note-stroke)': PALETTE.noteStroke,
     'var(--app-surface)': PALETTE.shapeFill,
     'var(--uml-shape-fill)': PALETTE.shapeFill,
+    'var(--uml-class-fill)': PALETTE.classFill,
   }
   return map[cssVar] ?? cssVar
 }
@@ -96,6 +100,7 @@ interface TextBlockOptions {
   fill: string
   anchor?: 'start' | 'middle'
   bold?: boolean
+  italic?: boolean
   /** Vertical anchor: 'middle' centres the block on `y`, 'top' starts at `y`. */
   baseline?: 'middle' | 'top'
 }
@@ -112,6 +117,7 @@ function textBlock(text: string, options: TextBlockOptions): string {
     fill,
     anchor = 'middle',
     bold = false,
+    italic = false,
     baseline = 'middle',
   } = options
 
@@ -131,7 +137,7 @@ function textBlock(text: string, options: TextBlockOptions): string {
 
   return `<text font-family="${SVG_FONT_STACK}" font-size="${fontSize}" ${
     bold ? 'font-weight="600" ' : ''
-  }fill="${fill}" text-anchor="${anchor}">${spans}</text>`
+  }${italic ? 'font-style="italic" ' : ''}fill="${fill}" text-anchor="${anchor}">${spans}</text>`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -287,6 +293,85 @@ function renderText(node: UmlNode, rect: Rect): string {
   })
 }
 
+function renderClass(node: UmlNode, rect: Rect): string {
+  const kind = nodeKindOf(node)
+  const stroke = inkOf(node, PALETTE.ink)
+  const fill = fillOf(node, PALETTE.classFill)
+  const stereotype = classifierStereotype(kind)
+  const attributes = memberLines(node.data.attributes)
+  const operations = memberLines(node.data.operations)
+  const memberSize = Math.max(10, node.data.fontSize - 2)
+  const headerHeight = stereotype ? 42 : 34
+  const rest = Math.max(rect.height - headerHeight, 0)
+  const attrBand = rest / 2
+  const left = rect.x + 8
+  const width = Math.max(rect.width - 16, 24)
+  const attrTop = rect.y + headerHeight
+  const opTop = attrTop + attrBand
+
+  const box =
+    `<rect x="${(rect.x + 1).toFixed(2)}" y="${(rect.y + 1).toFixed(2)}" ` +
+    `width="${(rect.width - 2).toFixed(2)}" height="${(rect.height - 2).toFixed(2)}" rx="2" ` +
+    `fill="${fill}" stroke="${stroke}" stroke-width="1.6"${dashOf(node)}/>`
+
+  const divider = (y: number) =>
+    `<path d="M${rect.x.toFixed(2)},${y.toFixed(2)} H${(rect.x + rect.width).toFixed(2)}" ` +
+    `stroke="${stroke}" stroke-width="1.2" fill="none"/>`
+
+  const stereo = stereotype
+    ? textBlock(`«${stereotype}»`, {
+        x: rectCenter(rect).x,
+        y: rect.y + 8,
+        maxWidth: width,
+        fontSize: 10,
+        fill: PALETTE.muted,
+        baseline: 'top',
+      })
+    : ''
+
+  const name = textBlock(node.data.label, {
+    x: rectCenter(rect).x,
+    y: rect.y + (stereotype ? 24 : headerHeight / 2),
+    maxWidth: width,
+    fontSize: node.data.fontSize,
+    fill: stroke,
+    bold: true,
+    italic: kind === 'interface',
+    baseline: stereotype ? 'top' : 'middle',
+  })
+
+  const members = (lines: readonly string[], top: number, band: number): string => {
+    let cursor = top + 6
+    const bottom = top + band - 4
+    return lines
+      .map((line) => {
+        if (cursor > bottom) return ''
+        const block = textBlock(line, {
+          x: left,
+          y: cursor,
+          maxWidth: width,
+          fontSize: memberSize,
+          fill: stroke,
+          anchor: 'start',
+          baseline: 'top',
+        })
+        cursor += memberSize * LINE_HEIGHT
+        return block
+      })
+      .join('')
+  }
+
+  return (
+    box +
+    divider(attrTop) +
+    divider(opTop) +
+    stereo +
+    name +
+    members(attributes, attrTop, attrBand) +
+    members(operations, opTop, rest - attrBand)
+  )
+}
+
 function renderNode(node: UmlNode): string {
   const rect = nodeRect(node)
   switch (nodeKindOf(node)) {
@@ -296,6 +381,10 @@ function renderNode(node: UmlNode): string {
       return renderUseCase(node, rect)
     case 'boundary':
       return renderBoundary(node, rect)
+    case 'class':
+    case 'interface':
+    case 'enumeration':
+      return renderClass(node, rect)
     case 'note':
       return renderNote(node, rect)
     case 'text':
@@ -321,15 +410,19 @@ function renderEdge(edge: UmlEdge, nodeById: Map<string, UmlNode>): string {
       ? buildSelfLoopGeometry(source)
       : buildEdgeGeometry(source, target, edge.data?.waypoints ?? [])
 
-  const marker =
+  const markerEnd =
     spec.marker === 'none'
       ? ''
       : ` marker-end="url(#${markerId(spec.marker, 'default')})"`
+  const markerStart =
+    spec.startMarker === 'none'
+      ? ''
+      : ` marker-start="url(#${markerId(spec.startMarker, 'default')})"`
   const dash = spec.lineStyle === 'dashed' ? ' stroke-dasharray="7 5"' : ''
 
   const path =
     `<path d="${geometry.path}" fill="none" stroke="${PALETTE.line}" ` +
-    `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"${dash}${marker}/>`
+    `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"${dash}${markerStart}${markerEnd}/>`
 
   const label = edge.data?.label?.trim()
   if (!label) return path

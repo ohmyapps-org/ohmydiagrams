@@ -89,6 +89,11 @@ function readDoc(id: string): StoredDocument | null {
   }
 }
 
+function countLines(source: string | undefined): number {
+  const text = source?.trim() ?? ''
+  return text === '' ? 0 : text.split(/\r?\n/).length
+}
+
 function entryOf(id: string, doc: UmlDocument, created: number): LibraryEntry {
   return {
     id,
@@ -98,6 +103,7 @@ function entryOf(id: string, doc: UmlDocument, created: number): LibraryEntry {
     updatedAt: Date.now(),
     nodeCount: doc.nodes.length,
     edgeCount: doc.edges.length,
+    ...(doc.kind === 'text' ? { lineCount: countLines(doc.source) } : {}),
   }
 }
 
@@ -305,6 +311,9 @@ function saveActive(): void {
           updatedAt: Date.now(),
           nodeCount: stored.doc.nodes.length,
           edgeCount: stored.doc.edges.length,
+          ...(stored.doc.kind === 'text'
+            ? { lineCount: countLines(stored.doc.source) }
+            : {}),
         }
       : entry,
   )
@@ -319,6 +328,7 @@ useDocument.subscribe((state, previous) => {
     state.nodes === previous.nodes &&
     state.edges === previous.edges &&
     state.meta === previous.meta &&
+    state.source === previous.source &&
     state.ui === previous.ui
   ) {
     return

@@ -359,7 +359,8 @@ Dos consecuencias prácticas:
 
 - Modo foco: al hacer clic en un ítem rojo, mover la cámara hacia los elementos
   involucrados (los ids ya viajan en `elementIds`).
-- Exportación a PlantUML (nunca Mermaid).
+- Exportación a PlantUML. Mermaid entra sólo como tipo de diagrama de texto
+  (pele), no como formato de exportación de los diagramas dibujados.
 
 **Ideas sueltas**
 

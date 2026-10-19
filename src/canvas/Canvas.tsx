@@ -25,7 +25,7 @@ import {
 import { GRID_SIZE, type Point } from '../uml/geometry'
 import { centredOn } from '../uml/placement'
 import { canConnect, orientConnection } from '../uml/rules'
-import { createUseCaseSkeleton } from '../uml/templates'
+import { SKELETONS } from '../uml/templates'
 import AgentPresence from './AgentPresence'
 import ContextMenu, { type ContextMenuTarget } from './ContextMenu'
 import EmptyState from './EmptyState'
@@ -243,9 +243,11 @@ export default function Canvas({ onOpenGuide }: Props) {
     .slice(0, 5)
 
   const quickSkeleton = useCallback(() => {
-    insertFragment(createUseCaseSkeleton(quickMenuPoint.current))
+    const skeleton = SKELETONS[kind]
+    if (!skeleton) return
+    insertFragment(skeleton(quickMenuPoint.current))
     setQuickMenu(null)
-  }, [insertFragment])
+  }, [insertFragment, kind])
 
   const menuAction = useCallback(
     (run: (id: string) => void) => () => {
@@ -344,7 +346,7 @@ export default function Canvas({ onOpenGuide }: Props) {
           canPaste={canPaste}
           shapes={quickShapes}
           onClose={closeMenu}
-          onSkeleton={kind === 'useCase' ? quickSkeleton : undefined}
+          onSkeleton={SKELETONS[kind] ? quickSkeleton : undefined}
           onCreate={quickCreate}
           onPaste={() => {
             store().paste()

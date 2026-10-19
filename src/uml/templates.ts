@@ -1,4 +1,5 @@
 import { createEdge, createNode } from '../store/document'
+import type { DiagramKind } from '../types/document'
 import { NODE_SPECS, type UmlEdge, type UmlNode } from '../types/uml'
 import type { Point } from './geometry'
 
@@ -62,4 +63,62 @@ export function createUseCaseSkeleton(center: Point): Fragment {
       createEdge('association', actor.id, useCase.id),
     ),
   }
+}
+
+const CLASS_GAP_X = 80
+const CLASS_GAP_Y = 56
+
+/**
+ * A small sales domain: Cliente, Pedido, LineaPedido and Producto, with an
+ * association, a composition (Pedido owns its lines) and a second association
+ * to Producto. Names, members and relations are placed so the skeleton starts
+ * out passing every class-diagram rule except the document title.
+ */
+export function createClassSkeleton(center: Point): Fragment {
+  const spec = NODE_SPECS.class
+  const col = spec.width + CLASS_GAP_X
+  const row = spec.height + CLASS_GAP_Y
+  const origin = { x: center.x - col, y: center.y - row / 2 }
+
+  const cliente = createNode('class', origin, 'Cliente', {
+    attributes: ['-nombre: String', '-email: String'],
+    operations: ['+registrar(): void'],
+  })
+  const pedido = createNode('class', { x: origin.x + col, y: origin.y }, 'Pedido', {
+    attributes: ['-fecha: Date', '-total: Decimal'],
+    operations: ['+confirmar(): void'],
+  })
+  const linea = createNode(
+    'class',
+    { x: origin.x + col, y: origin.y + row },
+    'LineaPedido',
+    {
+      attributes: ['-cantidad: Integer', '-precio: Decimal'],
+      operations: [],
+    },
+  )
+  const producto = createNode(
+    'class',
+    { x: origin.x + col * 2, y: origin.y + row },
+    'Producto',
+    {
+      attributes: ['-nombre: String', '-precio: Decimal'],
+      operations: [],
+    },
+  )
+
+  return {
+    nodes: [cliente, pedido, linea, producto],
+    edges: [
+      createEdge('association', cliente.id, pedido.id),
+      createEdge('composition', pedido.id, linea.id),
+      createEdge('association', linea.id, producto.id),
+    ],
+  }
+}
+
+/** Ready-made example for a kind, or `undefined` while that kind has none. */
+export const SKELETONS: Partial<Record<DiagramKind, (center: Point) => Fragment>> = {
+  useCase: createUseCaseSkeleton,
+  class: createClassSkeleton,
 }

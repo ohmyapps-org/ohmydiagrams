@@ -163,6 +163,7 @@ export default function UmlEdge({ id, source, target, data, selected }: EdgeProp
         strokeLinecap="round"
         strokeLinejoin="round"
         markerEnd={visual.markerUrl}
+        markerStart={visual.startMarkerUrl}
         pointerEvents="none"
       />
 

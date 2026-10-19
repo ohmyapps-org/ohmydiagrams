@@ -34,7 +34,7 @@ import type { AlignAxis } from '../uml/geometry'
 import ConnectionsMenu from './ConnectionsMenu'
 import ThemeButton from './ThemeButton'
 
-function ToolButton({
+export function ToolButton({
   icon,
   label,
   onClick,
@@ -64,7 +64,7 @@ function ToolButton({
   )
 }
 
-function Divider() {
+export function Divider() {
   return <div className="mx-1 h-5 w-px bg-line" />
 }
 
@@ -80,15 +80,21 @@ const ALIGN_BUTTONS: readonly { axis: AlignAxis; label: string; icon: ReactNode 
 /** Matches the `w-52` the menu renders at, for right-edge alignment. */
 const EXPORT_MENU_WIDTH_PX = 13 * 16
 
-function ExportMenu() {
+export interface ExportItem {
+  label: string
+  shortcut: string
+  run: () => void
+}
+
+const DRAWN_EXPORTS: readonly ExportItem[] = [
+  { label: 'PNG (2x)', shortcut: '⌘E', run: () => void exportPng(2) },
+  { label: 'SVG (vectorial)', shortcut: '⇧⌘E', run: exportSvg },
+  { label: 'JSON del diagrama', shortcut: '⌘S', run: exportJson },
+]
+
+export function ExportMenu({ items = DRAWN_EXPORTS }: { items?: readonly ExportItem[] }) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
-
-  const items: { label: string; shortcut: string; run: () => void }[] = [
-    { label: 'PNG (2x)', shortcut: '⌘E', run: () => void exportPng(2) },
-    { label: 'SVG (vectorial)', shortcut: '⇧⌘E', run: exportSvg },
-    { label: 'JSON del diagrama', shortcut: '⌘S', run: exportJson },
-  ]
 
   const anchor = open ? buttonRef.current?.getBoundingClientRect() : null
 

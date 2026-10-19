@@ -6,18 +6,49 @@ export type UmlNodeKind =
   | 'actor'
   | 'useCase'
   | 'boundary'
+  | 'class'
+  | 'interface'
+  | 'enumeration'
   | 'note'
   | 'rectangle'
   | 'ellipse'
   | 'diamond'
   | 'text'
 
-/** Every connector kind. The first four carry UML 2.5 semantics. */
+/** Classifiers that belong on a class diagram. */
+export const CLASSIFIER_KINDS: readonly UmlNodeKind[] = [
+  'class',
+  'interface',
+  'enumeration',
+]
+
+export function isClassifierKind(kind: UmlNodeKind): boolean {
+  return kind === 'class' || kind === 'interface' || kind === 'enumeration'
+}
+
+/** «interface» / «enumeration» drawn above the name. `null` for a plain class. */
+export function classifierStereotype(kind: UmlNodeKind): string | null {
+  if (kind === 'interface') return 'interface'
+  if (kind === 'enumeration') return 'enumeration'
+  return null
+}
+
+/** Attribute and operation lines, dropping blanks left by the editor. */
+export function memberLines(values: readonly string[] | undefined): string[] {
+  if (!values) return []
+  return values.map((line) => line.trimEnd()).filter((line) => line.trim().length > 0)
+}
+
+/** Every connector kind. The first four carry use-case UML 2.5 semantics. */
 export type UmlEdgeKind =
   | 'association'
   | 'include'
   | 'extend'
   | 'generalization'
+  | 'aggregation'
+  | 'composition'
+  | 'dependency'
+  | 'realization'
   | 'noteLink'
   | 'arrow'
 
@@ -32,6 +63,10 @@ export interface UmlNodeData extends Record<string, unknown> {
   lineStyle: LineStyle
   /** Rendering order. Boundaries default low so they sit behind everything. */
   z: number
+  /** Class-diagram attribute (or enumeration literal) lines. */
+  attributes: string[]
+  /** Class-diagram operation lines. */
+  operations: string[]
 }
 
 export interface Waypoint {
@@ -64,6 +99,8 @@ export interface UmlDocument {
   meta: DocumentMeta
   nodes: UmlNode[]
   edges: UmlEdge[]
+  /** Mermaid text of a `text` diagram. Drawn kinds have none. */
+  source?: string
 }
 
 /* -------------------------------------------------------------------------- */
@@ -126,6 +163,39 @@ export const NODE_SPECS: Record<UmlNodeKind, NodeKindSpec> = {
     resizable: true,
     z: 2,
   },
+  class: {
+    title: 'Clase',
+    defaultLabel: 'Clase',
+    width: 200,
+    height: 168,
+    minWidth: 140,
+    minHeight: 96,
+    keepAspectRatio: false,
+    resizable: true,
+    z: 2,
+  },
+  interface: {
+    title: 'Interfaz',
+    defaultLabel: 'Interfaz',
+    width: 200,
+    height: 148,
+    minWidth: 140,
+    minHeight: 88,
+    keepAspectRatio: false,
+    resizable: true,
+    z: 2,
+  },
+  enumeration: {
+    title: 'Enumeración',
+    defaultLabel: 'Enumeración',
+    width: 180,
+    height: 140,
+    minWidth: 120,
+    minHeight: 80,
+    keepAspectRatio: false,
+    resizable: true,
+    z: 2,
+  },
   note: {
     title: 'Nota',
     defaultLabel: 'Nota',
@@ -183,12 +253,17 @@ export const NODE_SPECS: Record<UmlNodeKind, NodeKindSpec> = {
   },
 }
 
+export type EndMarker = 'none' | 'open' | 'triangle' | 'filled'
+export type StartMarker = 'none' | 'diamond' | 'diamondFilled'
+
 export interface EdgeKindSpec {
   title: string
   /** Auto-suggested label. Empty for plain associations. */
   defaultLabel: string
   lineStyle: LineStyle
-  marker: 'none' | 'open' | 'triangle' | 'filled'
+  marker: EndMarker
+  /** Aggregation/composition sit the diamond on the "whole" (source) end. */
+  startMarker: StartMarker
 }
 
 export const EDGE_SPECS: Record<UmlEdgeKind, EdgeKindSpec> = {
@@ -197,36 +272,70 @@ export const EDGE_SPECS: Record<UmlEdgeKind, EdgeKindSpec> = {
     defaultLabel: '',
     lineStyle: 'solid',
     marker: 'none',
+    startMarker: 'none',
   },
   include: {
     title: '«include»',
     defaultLabel: '«include»',
     lineStyle: 'dashed',
     marker: 'open',
+    startMarker: 'none',
   },
   extend: {
     title: '«extend»',
     defaultLabel: '«extend»',
     lineStyle: 'dashed',
     marker: 'open',
+    startMarker: 'none',
   },
   generalization: {
     title: 'Generalización',
     defaultLabel: '',
     lineStyle: 'solid',
     marker: 'triangle',
+    startMarker: 'none',
+  },
+  aggregation: {
+    title: 'Agregación',
+    defaultLabel: '',
+    lineStyle: 'solid',
+    marker: 'none',
+    startMarker: 'diamond',
+  },
+  composition: {
+    title: 'Composición',
+    defaultLabel: '',
+    lineStyle: 'solid',
+    marker: 'none',
+    startMarker: 'diamondFilled',
+  },
+  dependency: {
+    title: 'Dependencia',
+    defaultLabel: '',
+    lineStyle: 'dashed',
+    marker: 'open',
+    startMarker: 'none',
+  },
+  realization: {
+    title: 'Realización',
+    defaultLabel: '',
+    lineStyle: 'dashed',
+    marker: 'triangle',
+    startMarker: 'none',
   },
   noteLink: {
     title: 'Conector de nota',
     defaultLabel: '',
     lineStyle: 'dashed',
     marker: 'none',
+    startMarker: 'none',
   },
   arrow: {
     title: 'Flecha',
     defaultLabel: '',
     lineStyle: 'solid',
     marker: 'filled',
+    startMarker: 'none',
   },
 }
 

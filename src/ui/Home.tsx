@@ -80,7 +80,9 @@ function DiagramCard({ entry }: { entry: LibraryEntry }) {
           {title}
         </span>
         <span className="text-[11.5px] text-muted">
-          {entry.nodeCount} elemento(s) · {entry.edgeCount} relación(es)
+          {entry.kind === 'text'
+            ? `${entry.lineCount ?? 0} línea(s) de Mermaid`
+            : `${entry.nodeCount} elemento(s) · ${entry.edgeCount} relación(es)`}
         </span>
         <span className="text-[11px] text-faint">Editado {when(entry.updatedAt)}</span>
       </button>
@@ -210,7 +212,7 @@ export default function Home() {
         </header>
 
         <Section title="Nuevo diagrama">
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {DIAGRAM_LIST.map((type) => (
               <NewCard key={type.kind} type={type} />
             ))}

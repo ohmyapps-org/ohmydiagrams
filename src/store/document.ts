@@ -19,6 +19,7 @@ import {
   type UmlNodeData,
   type UmlNodeKind,
   edgeKindOf,
+  isClassifierKind,
   nodeKindOf,
 } from '../types/uml'
 import {
@@ -33,6 +34,12 @@ import { pushHistory, takeSnapshot, type Snapshot } from './history'
 
 const PASTE_OFFSET = 24
 
+/** What a new text diagram opens with: valid, tiny, and shows the syntax. */
+export const TEXT_STARTER = `flowchart LR
+  idea[Idea] --> draft[Borrador]
+  draft --> done[Listo]
+`
+
 let idCounter = 0
 
 export function nextId(prefix: string): string {
@@ -42,22 +49,33 @@ export function nextId(prefix: string): string {
 
 /** A document with nothing in it, ready to be opened. */
 export function emptyDocument(kind: DiagramKind): UmlDocument {
-  return { version: 1, kind, meta: { title: '', description: '' }, nodes: [], edges: [] }
+  const doc: UmlDocument = {
+    version: 1,
+    kind,
+    meta: { title: '', description: '' },
+    nodes: [],
+    edges: [],
+  }
+  return kind === 'text' ? { ...doc, source: TEXT_STARTER } : doc
 }
 
 export function createNode(
   kind: UmlNodeKind,
   position: Point,
   label?: string,
+  extra?: Partial<UmlNodeData>,
 ): UmlNode {
   const spec = NODE_SPECS[kind]
   const data: UmlNodeData = {
     label: label ?? spec.defaultLabel,
     fill: null,
     stroke: null,
-    fontSize: kind === 'boundary' ? 15 : 14,
+    fontSize: kind === 'boundary' ? 15 : isClassifierKind(kind) ? 13 : 14,
     lineStyle: 'solid',
     z: spec.z,
+    attributes: [],
+    operations: [],
+    ...extra,
   }
   return {
     id: nextId(kind),
@@ -110,6 +128,8 @@ export interface DocumentStore {
   nodes: UmlNode[]
   edges: UmlEdge[]
   meta: DocumentMeta
+  /** Mermaid text of a `text` diagram; empty for every drawn kind. */
+  source: string
   past: Snapshot[]
   future: Snapshot[]
   ui: UiState
@@ -151,6 +171,7 @@ export interface DocumentStore {
   sendToBack: (ids: string[]) => void
 
   setMeta: (patch: Partial<DocumentMeta>) => void
+  setSource: (source: string) => void
   setUi: (patch: Partial<UiState>) => void
   toggleGuideStep: (stepId: string) => void
   setFlagged: (ids: string[]) => void
@@ -200,6 +221,7 @@ export const useDocument = create<DocumentStore>()(
       nodes: [],
       edges: [],
       meta: INITIAL_META,
+      source: '',
       past: [],
       future: [],
       ui: INITIAL_UI,
@@ -549,6 +571,10 @@ export const useDocument = create<DocumentStore>()(
       setMeta: (patch) =>
         set((state) => ({ meta: { ...state.meta, ...patch } })),
 
+      // Not in the undo stack: the editor has its own, and a snapshot per
+      // keystroke would bury every canvas step.
+      setSource: (source) => set({ source }),
+
       setUi: (patch) => set((state) => ({ ui: { ...state.ui, ...patch } })),
 
       toggleGuideStep: (stepId) =>
@@ -573,6 +599,7 @@ export const useDocument = create<DocumentStore>()(
           nodes: doc.nodes,
           edges: doc.edges,
           meta: doc.meta,
+          source: doc.source ?? '',
           past: [],
           future: [],
           clipboard: null,
@@ -595,6 +622,7 @@ export const useDocument = create<DocumentStore>()(
           version: 1,
           kind: state.kind,
           meta: state.meta,
+          ...(state.kind === 'text' ? { source: state.source } : {}),
           nodes: state.nodes.map((node) => ({ ...node, selected: false })),
           edges: state.edges.map((edge) => ({ ...edge, selected: false })),
         }

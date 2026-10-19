@@ -34,6 +34,8 @@ const LABELS: Record<BridgeMethod, string> = {
   deleteElements: 'Borrando elementos',
   setMeta: 'Cambiando el título',
   insertSkeleton: 'Insertando un esqueleto',
+  getSource: 'Leyendo el texto',
+  setSource: 'Escribiendo el diagrama',
   loadDocument: 'Cargando un diagrama',
   clear: 'Vaciando el lienzo',
 }

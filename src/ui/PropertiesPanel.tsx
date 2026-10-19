@@ -4,6 +4,7 @@ import { useDocument } from '../store/document'
 import {
   EDGE_SPECS,
   NODE_SPECS,
+  isClassifierKind,
   type LineStyle,
   type UmlEdgeKind,
   type UmlNodeKind,
@@ -11,25 +12,8 @@ import {
   nodeKindOf,
 } from '../types/uml'
 
-const NODE_KINDS: readonly UmlNodeKind[] = [
-  'actor',
-  'useCase',
-  'boundary',
-  'note',
-  'rectangle',
-  'ellipse',
-  'diamond',
-  'text',
-]
-
-const EDGE_KINDS: readonly UmlEdgeKind[] = [
-  'association',
-  'include',
-  'extend',
-  'generalization',
-  'noteLink',
-  'arrow',
-]
+const NODE_KINDS = Object.keys(NODE_SPECS) as UmlNodeKind[]
+const EDGE_KINDS = Object.keys(EDGE_SPECS) as UmlEdgeKind[]
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -129,6 +113,35 @@ function NodeProperties({ id }: { id: string }) {
           className={inputClass}
         />
       </Field>
+
+      {isClassifierKind(kind) && (
+        <>
+          <Field label={kind === 'enumeration' ? 'Literales' : 'Atributos'}>
+            <textarea
+              value={(node.data.attributes ?? []).join('\n')}
+              onChange={(event) =>
+                updateNodeData(id, { attributes: event.target.value.split('\n') })
+              }
+              rows={4}
+              placeholder={
+                kind === 'enumeration' ? 'Pendiente\nPagado' : '-nombre: String'
+              }
+              className={`${inputClass} resize-y font-mono text-[12px]`}
+            />
+          </Field>
+          <Field label="Operaciones">
+            <textarea
+              value={(node.data.operations ?? []).join('\n')}
+              onChange={(event) =>
+                updateNodeData(id, { operations: event.target.value.split('\n') })
+              }
+              rows={4}
+              placeholder="+confirmar(): void"
+              className={`${inputClass} resize-y font-mono text-[12px]`}
+            />
+          </Field>
+        </>
+      )}
 
       <Field label="Tipo de elemento">
         <select

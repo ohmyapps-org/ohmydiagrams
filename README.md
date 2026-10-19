@@ -8,7 +8,8 @@ conoce las reglas de UML 2.5 y te va marcando en tiempo real qué le falta al
 diagrama para ser correcto, así podés concentrarte en el modelado y no en
 recordar la notación.
 
-No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
+Los diagramas UML se dibujan siempre. Aparte hay un tipo **Texto (Mermaid)**
+para quien prefiere escribir, o para que lo escriba una IA: ver abajo.
 
 ## Características
 
@@ -39,6 +40,23 @@ No usa Mermaid ni ninguna sintaxis de texto: el diagrama siempre se dibuja.
   guardada sigue al sistema operativo.
 - Modo zen (tecla `Z`): se van la barra, la paleta y el panel derecho, y queda
   el lienzo solo.
+
+**Diagramas de texto (Mermaid, con pele)**
+
+- El tipo **Texto (Mermaid)** abre un editor de texto a la izquierda y el
+  dibujo a la derecha. Se vuelve a dibujar al dejar de teclear y sigue el
+  tema claro/oscuro sin renderizar de nuevo.
+- El dibujo lo hace [pele](https://github.com/obsidianmd/pele), un renderer
+  de Mermaid 12.1 a SVG sin dependencias. Se carga bajo demanda: quien solo
+  dibuja UML no descarga nada de eso (`src/text/mermaid.ts`).
+- Si el texto no dibuja, el editor muestra línea, columna y motivo, y deja a
+  la vista el último dibujo válido atenuado.
+- Exporta SVG, PNG, el texto `.mmd` y el JSON del documento. Un texto vacío
+  ofrece ejemplos de flujo, secuencia, clases, estados y entidad-relación.
+- No tiene lienzo ni checklist UML: las 17 reglas son del editor dibujado.
+- Para agentes: `get_source` y `set_source`. `set_source` devuelve el
+  veredicto de pele (`valid`, tipo detectado, línea y columna del error), así
+  que la IA corrige y reintenta hasta que dibuje.
 
 **Relaciones UML**
 - Asociación, `«include»`, `«extend»`, generalización, conector de nota y flecha

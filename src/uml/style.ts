@@ -3,7 +3,13 @@ import { EDGE_SPECS, type UmlEdgeKind } from '../types/uml'
 /** Visual state an element can be in, shared by the canvas and the exporter. */
 export type ElementState = 'default' | 'selected' | 'flagged'
 
-export const MARKER_SHAPES = ['open', 'triangle', 'filled'] as const
+export const MARKER_SHAPES = [
+  'open',
+  'triangle',
+  'filled',
+  'diamond',
+  'diamondFilled',
+] as const
 export type MarkerShape = (typeof MARKER_SHAPES)[number]
 
 export const ELEMENT_STATES: readonly ElementState[] = [
@@ -20,6 +26,7 @@ export interface EdgeVisual {
   strokeVar: string
   dashArray: string | undefined
   markerUrl: string | undefined
+  startMarkerUrl: string | undefined
   strokeWidth: number
 }
 
@@ -38,9 +45,11 @@ export function edgeVisual(
     strokeVar: STROKE_VAR[state],
     dashArray: spec.lineStyle === 'dashed' ? '7 5' : undefined,
     markerUrl:
-      spec.marker === 'none'
+      spec.marker === 'none' ? undefined : `url(#${markerId(spec.marker, state)})`,
+    startMarkerUrl:
+      spec.startMarker === 'none'
         ? undefined
-        : `url(#${markerId(spec.marker, state)})`,
+        : `url(#${markerId(spec.startMarker, state)})`,
     strokeWidth: state === 'default' ? 1.6 : 2.2,
   }
 }
@@ -80,6 +89,22 @@ export function markerDefs(
     parts.push(
       `<marker id="${markerId('filled', state)}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" ${common}>` +
         `<path d="M1,1 L11,6 L1,11 Z" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>` +
+        `</marker>`,
+    )
+
+    // Hollow diamond: aggregation. `orient="auto"` so a marker-start sits
+    // on the source with the far vertex pointing at the part.
+    const diamond = `orient="auto" markerUnits="userSpaceOnUse"`
+    parts.push(
+      `<marker id="${markerId('diamond', state)}" viewBox="0 0 14 14" refX="1" refY="7" markerWidth="14" markerHeight="14" ${diamond}>` +
+        `<path d="M1,7 L7,1 L13,7 L7,13 Z" fill="${background}" stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round"/>` +
+        `</marker>`,
+    )
+
+    // Filled diamond: composition.
+    parts.push(
+      `<marker id="${markerId('diamondFilled', state)}" viewBox="0 0 14 14" refX="1" refY="7" markerWidth="14" markerHeight="14" ${diamond}>` +
+        `<path d="M1,7 L7,1 L13,7 L7,13 Z" fill="${stroke}" stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round"/>` +
         `</marker>`,
     )
   }
