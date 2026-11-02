@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "typecheck": "tsc -b",
+    "typecheck": "bun check",
     "test": "bun test",
     "mcp": "bun mcp/server.ts",
     "planilla": "bun scripts/planilla.ts",
